@@ -1,0 +1,5 @@
+.mypy_cache
+.gitignore
+Dockerfile
+stack.yaml
+.app

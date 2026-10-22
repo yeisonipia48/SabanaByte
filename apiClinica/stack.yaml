@@ -1,0 +1,90 @@
+services:
+
+  data:
+    image: postgres:18
+    volumes:
+      - postgres_app_citas:/var/lib/postgresql
+    networks:
+      - net_api
+    secrets:
+      - postgres_user
+      - postgres_password
+    environment:
+      POSTGRES_USER_FILE: '/run/secrets/postgres_user'
+      POSTGRES_PASSWORD_FILE: '/run/secrets/postgres_password'
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+    ports:
+      - 5432:5432
+    
+  pgbouncer:
+    image: edoburu/pgbouncer:latest #cualquier imagen oficial/estable
+    networks:
+      - net_api
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+    ports:
+      - 6432:6432
+    configs: # Los archivos se distribuyen nativamente en el clúster
+      - source: pgbouncer_config
+        target: /etc/pgbouncer/pgbouncer.ini
+      - source: userlist_config
+        target: /etc/pgbouncer/userlist.txt
+    
+  
+  api:
+    image: api-clinica:v1
+    networks:
+      - net_api
+    secrets:
+      - postgres_user
+      - postgres_password
+      - postgres_host
+      - postgres_db
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+    ports:
+      - 8000:8000
+    
+# DEFINICIÓN DE CONFIGURACIONES (Mapea los archivos locales para que Docker los maneje)
+configs:
+  pgbouncer_config:
+    file: ./pgbouncer.ini
+  userlist_config:
+    file: ./userlist.txt
+
+volumes:
+  postgres_app_citas:
+    name: postgres_app_citas
+
+secrets:
+  postgres_password:
+    external: true
+  postgres_user:
+    external: true
+  postgres_host:
+    external: true
+  postgres_db:
+    external: true
+
+networks:
+  net_api:
+    driver: overlay
+    ipam:
+      config:
+        - subnet: 10.20.30.0/28
