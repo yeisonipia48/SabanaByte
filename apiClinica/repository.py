@@ -229,7 +229,7 @@ class AuthenticationRepository:
 
         return True
 
-    async def register(self, data: RegistroUsuarioSchema) -> Any:
+    async def register(self, data: RegistroUsuarioSchema) -> dict:
         try:
             nuevo_usuario = models.Usuarios(
                 id_rol=data.id_rol,
@@ -271,13 +271,13 @@ class AuthenticationRepository:
             await self.session.commit()
             if rol == "paciente":
                 await self.session.refresh(nuevo_paciente)
-                return nuevo_paciente
+                return {"message":f"Paciente:  {nuevo_paciente.nombres} {nuevo_paciente.apellidos} registrado con exito."}
             elif rol == "medico":
                 await self.session.refresh(nuevo_medico)
-                return nuevo_medico
+                return {"message":f"Medico:  {nuevo_paciente.nombres} {nuevo_medico.apellidos} registrado con exito."}
             else:
                 await self.session.refresh(nuevo_usuario)
-                return nuevo_usuario
+                return {"message": f"Usuario: documento: {nuevo_usuario.numero_documento} correo:{nuevo_usuario.email} registrado con exito"}
         except Exception as e:
             await self.session.rollback()
             raise e

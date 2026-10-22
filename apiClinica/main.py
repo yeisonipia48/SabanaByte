@@ -154,8 +154,8 @@ async def login(data: LoginSchema, repository: AuthenticationRepository = Depend
     except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     
-@app.post("/auth/register", status_code=status.HTTP_201_CREATED, response_model=Any)
-async def register(data: RegistroUsuarioSchema, repository: AuthenticationRepository = Depends()) -> Any:
+@app.post("/auth/register", status_code=status.HTTP_201_CREATED, response_model=dict)
+async def register(data: RegistroUsuarioSchema, repository: AuthenticationRepository = Depends()) -> dict:
     try:
         registro = await repository.register(data)
         return registro
