@@ -1,69 +1,51 @@
-import { Lock, PhoneCall, Shield, ShieldCheck } from 'lucide-react'
+import { Lock, Shield, ShieldCheck } from 'lucide-react'
 import epsHero from '../../../assets/eps-hero.jpg'
 
 function InstitutionalHero() {
   return (
     <section
-      className="relative hidden lg:flex lg:col-span-5 flex-col justify-between p-8 text-white overflow-hidden"
+      className="relative hidden overflow-hidden bg-sky-950 text-white lg:col-span-5 lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-12"
       data-purpose="institutional-hero"
     >
       <img
         alt="Atención médica profesional y humana"
-        className="absolute inset-0 w-full h-full object-cover object-center z-0"
+        className="absolute inset-0 z-0 h-full w-full object-cover object-center"
         src={epsHero}
       />
-      <div className="absolute inset-0 custom-gradient-overlay z-10" />
+      <div className="absolute inset-0 z-10 custom-gradient-overlay" />
 
-      <div className="relative z-20 space-y-5">
-        <div>
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold tracking-wide text-white border border-white/20 uppercase">
-            <Shield className="w-3.5 h-3.5 text-cyan-300" aria-hidden="true" />
-            Red Integral de Salud Colombia
-          </span>
-        </div>
-        <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight tracking-tight text-white">
+      <div className="relative z-20">
+        <span className="inline-flex items-center gap-2 border border-white/25 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm">
+          <Shield className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
+          Red Integral de Salud Colombia
+        </span>
+
+        <h1 className="mt-7 max-w-md text-4xl font-extrabold leading-[1.08] tracking-tight text-white xl:text-[2.75rem]">
           Tu salud y la de tu familia en las mejores manos
         </h1>
-        <p className="text-sm xl:text-base text-slate-200/90 leading-relaxed font-normal">
+        <p className="mt-5 max-w-md text-sm leading-relaxed text-slate-200/90 xl:text-base">
           Gestiona citas médicas prioritarias, autorizaciones, fórmulas y
           consulta de exámenes diagnósticos sin filas ni traslados.
         </p>
       </div>
 
-      <div className="relative z-20 space-y-4 pt-12">
-        <div className="bg-white/95 backdrop-blur-md text-slate-800 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shadow-lg border border-white/40">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-            <PhoneCall
-              className="w-4 h-4 shrink-0 text-emerald-600"
-              aria-hidden="true"
-            />
-            <span>
-              Línea Nacional 24/7:{' '}
-              <strong className="text-sky-900 font-bold tracking-tight">
-                01 8000 123 456
-              </strong>
-            </span>
-          </div>
-          <span className="shrink-0 bg-rose-100 text-rose-700 font-bold text-[11px] px-2 py-0.5 rounded-md border border-rose-200/60">
-            Urgencias: #123
-          </span>
-        </div>
+      <div className="relative z-20 mt-12">
 
-        <div className="flex items-center justify-between gap-3 text-[11px] text-slate-300 px-1 font-medium">
-          <div className="flex items-center gap-1.5 hover:text-white transition-colors cursor-default">
+        <div className="mt-5 flex flex-wrap items-start gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-[10px] font-medium uppercase tracking-wider text-slate-300">
+          <span className="flex items-start gap-1.5">
             <ShieldCheck
-              className="w-3.5 h-3.5 shrink-0 text-cyan-400"
+              className="mt-px h-3.5 w-3.5 shrink-0 text-cyan-300"
               aria-hidden="true"
             />
-            <span>Vigilado Superintendencia Nacional de Salud</span>
-          </div>
-          <div className="flex items-center gap-1.5 hover:text-white transition-colors cursor-default">
+            Vigilado Superintendencia Nacional de Salud
+          </span>
+          <span className="flex items-center gap-1.5">
             <Lock
-              className="w-3.5 h-3.5 shrink-0 text-emerald-400"
+              className="h-3.5 w-3.5 shrink-0 text-emerald-300"
               aria-hidden="true"
             />
-            <span>Conexión Cifrada SSL</span>
-          </div>
+            Conexión Cifrada SSL
+          </span>
         </div>
       </div>
     </section>

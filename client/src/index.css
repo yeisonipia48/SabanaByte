@@ -7,7 +7,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-100 text-slate-800 antialiased;
+    @apply bg-white text-slate-800 antialiased;
     margin: 0;
     min-width: 320px;
   }
@@ -17,18 +17,33 @@
   }
 }
 
-/* Sombra sutil y realce tipo glass de la tarjeta principal */
-@utility portal-card-shadow {
-  box-shadow:
-    0 25px 50px -12px rgba(15, 23, 42, 0.15),
-    0 0 0 1px rgba(226, 232, 240, 0.8);
-}
-
 /* Degradado institucional sobre la imagen del hero */
 @utility custom-gradient-overlay {
   background: linear-gradient(
     180deg,
-    rgba(8, 51, 95, 0.82) 0%,
-    rgba(3, 30, 60, 0.94) 100%
+    rgba(7, 42, 79, 0.78) 0%,
+    rgba(3, 24, 48, 0.95) 100%
   );
+}
+
+/* Scroll fino para la columna del formulario en pantallas de poca altura */
+.login-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.login-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.login-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.login-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+}
+
+.login-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
 }

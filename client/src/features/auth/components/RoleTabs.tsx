@@ -3,8 +3,7 @@ import type { Role } from '../types'
 
 const ROLES: ReadonlyArray<{ id: Role; label: string }> = [
   { id: 'afiliado', label: 'Afiliados y Pacientes' },
-  { id: 'empresa', label: 'Empresas y Aportantes' },
-  { id: 'medico', label: 'Médicos e IPS' },
+
 ]
 
 interface RoleTabsProps {
@@ -48,7 +47,7 @@ function RoleTabs({ value, onChange }: RoleTabsProps) {
 
   return (
     <div
-      className="bg-slate-100 p-1 rounded-xl flex items-center mb-5 text-xs sm:text-sm font-semibold text-slate-600"
+      className="mb-5 grid grid-cols-3 border-b border-slate-200"
       role="tablist"
       aria-label="Tipo de usuario"
     >
@@ -69,11 +68,10 @@ function RoleTabs({ value, onChange }: RoleTabsProps) {
             tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(role.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
-            className={`flex-1 py-2 px-3 text-center rounded-lg transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 ${
-              isActive
-                ? 'bg-sky-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-            }`}
+            className={`-mb-px border-b-2 px-1.5 pb-2.5 pt-1 text-[11px] font-semibold leading-tight transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 sm:px-2 sm:text-xs ${isActive
+                ? 'border-sky-800 text-sky-900'
+                : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
+              }`}
           >
             {role.label}
           </button>
