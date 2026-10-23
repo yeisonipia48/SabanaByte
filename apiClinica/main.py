@@ -29,6 +29,14 @@ async def obtener_usuarios(repository: UsuariosRepository = Depends()) -> List[d
         return usuarios
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+@app.get("/usuarios/{id_usuario}", response_model=UsuarioResponseSchema)
+async def obtener_usuario_por_id(id_usuario:int, repository: UsuariosRepository = Depends())-> models.Usuarios:
+    try:
+        usuario = await repository.obtener_usuario_por_id(id_usuario)
+        return usuario
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @app.post("/usuarios",response_model=UsuarioCreadoResponseSchema, status_code=status.HTTP_201_CREATED)
 async def crear_usuario(data: UsuarioCreateSchema, repository: UsuariosRepository = Depends()) -> models.Usuarios:
@@ -82,6 +90,14 @@ async def obtener_pacientes(repository: PacientesRepository = Depends()) -> List
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@app.get("/pacientes/{id_paciente}", response_model=PacienteResponseSchema)
+async def obtener_paciente_por_id(id_paciente:int, repository: PacientesRepository = Depends()) -> models.Pacientes:
+    try:
+        paciente = await repository.obtener_paciente_por_id(id_paciente)
+        return paciente
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 @app.post("/pacientes", response_model=PacienteCreadoResponseSchema, status_code=status.HTTP_201_CREATED)
 async def crear_paciente(data: PacienteCreateSchema, repository: PacientesRepository = Depends()) -> models.Pacientes:
     try:
@@ -117,6 +133,14 @@ async def obtener_medicos(repository: MedicosRepository = Depends()) -> List[dic
         return medicos
     except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@app.get("/medicos/{id_medico}", response_model=MedicoResponseSchema)
+async def obtener_medico_por_id(id_medico:int, respository: MedicosRepository = Depends()) -> models.Medicos:
+    try:
+        medico = await respository.obtener_medico_por_id(id_medico)
+        return medico
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @app.post("/medicos", response_model=MedicoCreadoResponseSchema, status_code=status.HTTP_201_CREATED)
 async def crear_medico(datos: MedicoCreateSchema, repository: MedicosRepository = Depends()) -> models.Medicos:

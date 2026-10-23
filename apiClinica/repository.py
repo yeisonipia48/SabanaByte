@@ -59,6 +59,22 @@ class UsuariosRepository:
         usuarios = result.mappings().all()
         return [dict(u) for u in usuarios]
 
+    async def obtener_usuario_por_id(self, id_usuario: int) -> models.Usuarios:
+        query = select(models.Usuarios.id,
+            models.Roles.rol,
+            models.Usuarios.tipo_documento,
+            models.Usuarios.numero_documento,
+            models.Usuarios.email,
+            models.Usuarios.is_active,
+             models.Usuarios.created_at
+            ).join(models.Roles, models.Usuarios.id_rol == models.Roles.id).where(models.Usuarios.id == id_usuario)
+        result = await self.session.execute(query)
+        usuario = result.one_or_none()
+        if not usuario:
+            raise ValueError(f"No existe usuario con id: {id_usuario}")
+    
+        return usuario
+
     async def actualizar_usuario(self, usuario_id: int, datos: UsuarioUpdateSchema) -> models.Usuarios:
         usuario = await self.session.get(models.Usuarios, usuario_id)
         if not usuario:
@@ -116,6 +132,25 @@ class PacientesRepository:
         pacientes = result.mappings().all()
         return [dict(p) for p in pacientes]
 
+    async def obtener_paciente_por_id(self, id_paciente) -> models.Pacientes:
+        query = select(
+            models.Pacientes.id,
+            models.Pacientes.id_usuario,
+            models.Pacientes.nombres,
+            models.Pacientes.apellidos,
+            models.Pacientes.fecha_nacimiento,
+            models.Pacientes.telefono,
+            models.Usuarios.numero_documento,
+            models.Usuarios.email,
+            models.Pacientes.direccion
+            ).join(models.Usuarios, models.Pacientes.id_usuario == models.Usuarios.id).where(models.Pacientes.id == id_paciente)
+        result = await self.session.execute(query)
+        paciente = result.one_or_none()
+        if not paciente:
+            raise ValueError(f"No existe paciente con id: {id_paciente}")
+        return paciente
+
+
     async def crear_paciente(self, paciente: PacienteCreateSchema) -> models.Pacientes:
         nuevo_paciente = models.Pacientes(
             id_usuario=paciente.id_usuario,
@@ -170,6 +205,25 @@ class MedicosRepository:
         result = await self.session.execute(query)
         medicos = result.mappings().all()
         return [dict(m) for m in medicos]
+
+    async def obtener_medico_por_id(self, id_medico) -> models.Medicos:
+        query = select(
+            models.Medicos.id,
+            models.Medicos.id_usuario,
+            models.Medicos.nombres,
+            models.Medicos.apellidos,
+            models.Medicos.telefono,
+            models.Usuarios.numero_documento,
+            models.Usuarios.email,
+            models.Medicos.tarjeta_profesional,
+            models.Medicos.especialidad,
+            models.Medicos.consultorio
+            ).join(models.Usuarios, models.Medicos.id_usuario == models.Usuarios.id).where(models.Medicos.id == id_medico)
+        result = await self.session.execute(query)
+        medico = result.one_or_none()
+        if not medico:
+            raise ValueError(f"No existe medico con id: {id_medico}")
+        return medico
 
     async def crear_medico(self, medico: MedicoCreateSchema) -> models.Medicos:
         nuevo_medico = models.Medicos(
