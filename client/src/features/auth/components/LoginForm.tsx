@@ -19,7 +19,6 @@ import {
 import { login } from '../authService'
 import type { Role } from '../types'
 import BrandLogo from './BrandLogo'
-import QuickHelp from './QuickHelp'
 import RoleTabs from './RoleTabs'
 
 const DOCUMENT_TYPES = [
@@ -63,7 +62,7 @@ function readRememberedCredentials(): RememberedCredentials {
     const record = parsed as Record<string, unknown>
     const documentType =
       typeof record.documentType === 'string' &&
-      DOCUMENT_TYPES.some((type) => type.value === record.documentType)
+        DOCUMENT_TYPES.some((type) => type.value === record.documentType)
         ? record.documentType
         : DEFAULT_DOCUMENT_TYPE
     const documentNumber =
@@ -513,7 +512,6 @@ function LoginForm() {
         </div>
       </div>
 
-      <QuickHelp />
     </section>
   )
 }
