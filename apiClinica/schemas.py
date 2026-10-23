@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 class UsuarioCreateSchema(BaseModel):
     id_rol: int
@@ -151,3 +151,37 @@ class RegistroUsuarioSchema(BaseModel):
     tarjeta_profesional: str | None = None # Solo para médicos
     especialidad: str | None = None       # Solo para médicos
     consultorio: str | None = None        # Solo para médicos
+
+class AgendaCreateSchema(BaseModel):
+    id_medico: int
+    fecha_inicio: date
+    fecha_fin: date
+    duracion_cita: int
+    hora_inicio: time 
+    hora_fin: time
+
+class AgendaCreateResponseSchema(BaseModel):
+    id: int
+    id_medico: int
+    fecha_inicio: date
+    fecha_fin: date
+    duracion_cita: int
+    hora_inicio: time 
+    hora_fin: time
+    estado: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AgendaResponseSchema(BaseModel):
+    id: int
+    medico: str
+    fecha_inicio: date
+    fecha_fin: date
+    duracion_cita: int
+    hora_inicio: time 
+    hora_fin: time
+    estado: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+    

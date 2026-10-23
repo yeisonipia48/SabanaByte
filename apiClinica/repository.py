@@ -4,10 +4,11 @@ from functools import lru_cache
 from sqlalchemy import select
 from alembicApi import models
 from schemas import PacienteUpdateSchema, UsuarioCreateSchema, RolCreateSchema, UsuarioUpdateSchema, PacienteCreateSchema
-from schemas import MedicoCreateSchema, MedicoUpdateSchema, LoginSchema, RegistroUsuarioSchema
+from schemas import MedicoCreateSchema, MedicoUpdateSchema, LoginSchema, RegistroUsuarioSchema, AgendaCreateSchema
 from dbconexion import Conexion
-from typing import Any, AsyncGenerator, List, Dict
+from typing import Any, AsyncGenerator, List
 from Security.security import hash_password, verify_password
+from sqlalchemy import func
 
 @lru_cache
 def _get_con() -> Conexion:
@@ -336,7 +337,49 @@ class AuthenticationRepository:
             await self.session.rollback()
             raise e
         
+class AgendaRepository:
+    def __init__(self, session: AsyncSession = Depends(get_conexion)):
+        self.session = session
 
+    #obtenemos la agenda posando el id del medico, ya que es mas optimo mostrarla por medico
+    async def obtener_agenda(self, id_medico:int ) -> List[dict[str,Any]]:
+        medico = func.concat(models.Medicos.apellidos, ' ', models.Medicos.nombres)
+        query = select(
+            models.Agenda_Medicas.id,
+            medico.label("medico"),
+            models.Agenda_Medicas.fecha_inicio,
+            models.Agenda_Medicas.fecha_fin,
+            models.Agenda_Medicas.duracion_cita,
+            models.Agenda_Medicas.hora_inicio,
+            models.Agenda_Medicas.hora_fin,
+            models.Agenda_Medicas.estado
+        ).join(models.Medicos, models.Agenda_Medicas.id_medico == models.Medicos.id).where(models.Agenda_Medicas.id_medico == id_medico)
+
+        result = await self.session.execute(query)
+        agenda = result.mappings().all()
+        if not agenda:
+            raise ValueError(f"No hay agenda asignada al medico con id: {id_medico}")
+        
+        return [dict(a) for a in agenda]
+
+    async def crear_agenda(self, data: AgendaCreateSchema) -> models.Agenda_Medicas:
+        nueva_agenda = models.Agenda_Medicas(
+            id_medico=data.id_medico,
+            fecha_inicio = data.fecha_inicio,
+            fecha_fin = data.fecha_fin,
+            duracion_cita = data.duracion_cita,
+            hora_inicio = data.hora_inicio,
+            hora_fin = data.hora_fin
+        )
+
+        self.session.add(nueva_agenda)
+        await self.session.commit()
+        await self.session.refresh(nueva_agenda)
+        return nueva_agenda
+
+
+
+    
 
 
     
