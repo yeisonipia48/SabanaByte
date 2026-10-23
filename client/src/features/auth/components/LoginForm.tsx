@@ -7,18 +7,12 @@ import {
   EyeOff,
   Hash,
   IdCard,
-  Info,
   Loader2,
   Lock,
   LogIn,
-
-  Smartphone,
-
 } from 'lucide-react'
 import { login } from '../authService'
-import type { Role } from '../types'
 import BrandLogo from './BrandLogo'
-import RoleTabs from './RoleTabs'
 
 const DOCUMENT_TYPES = [
   { value: 'CC', label: 'CC - Cédula de Ciudadanía' },
@@ -128,7 +122,7 @@ function fieldClasses(hasError: boolean, spacing = 'pr-4') {
 
 function LoginForm() {
   const [remembered] = useState(readRememberedCredentials)
-  const [role, setRole] = useState<Role>('afiliado')
+
   const [docType, setDocType] = useState(remembered.documentType)
   const [docNumber, setDocNumber] = useState(remembered.documentNumber)
   const [password, setPassword] = useState('')
@@ -188,7 +182,7 @@ function LoginForm() {
 
     try {
       const result = await login({
-        role,
+
         documentType: docType,
         documentNumber: docNumber.trim(),
         password,
@@ -237,27 +231,14 @@ function LoginForm() {
             </p>
           </div>
 
-          <RoleTabs value={role} onChange={setRole} />
 
-          <aside
-            className="mb-5 flex items-start gap-2.5 border-l-4 border-sky-700 bg-sky-50 py-2.5 pl-3 pr-3.5 text-xs text-sky-900"
-            data-purpose="notification-banner"
-          >
-            <Info
-              className="mt-0.5 h-4 w-4 shrink-0 text-sky-700"
-              aria-hidden="true"
-            />
-            <p className="leading-relaxed">
-              <strong className="font-semibold text-sky-950">Afiliado:</strong>{' '}
-              Si tu documento fue emitido recientemente o cumples 18 años,
-              recuerda actualizar a Cédula de Ciudadanía.
-            </p>
-          </aside>
+
 
           <div
             id="login-panel"
             role="tabpanel"
-            aria-labelledby={`role-tab-${role}`}
+
+            className="rounded-[30px] border-2 border-t-4 border-sky-800 bg-white p-5 sm:p-6"
           >
             <form
               className="space-y-4"
@@ -430,13 +411,7 @@ function LoginForm() {
                     Recordar documento en este dispositivo
                   </span>
                 </label>
-                <a
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800"
-                  href="#"
-                >
-                  <Smartphone className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>Ingreso con Token SMS</span>
-                </a>
+
               </div>
 
               <div className="space-y-3" aria-live="polite">
