@@ -1,4 +1,4 @@
-import { Lock, Shield, ShieldCheck } from 'lucide-react'
+import { Lock, ShieldCheck } from 'lucide-react'
 import epsHero from '../../../assets/eps-hero.jpg'
 import BrandLogo from './BrandLogo'
 

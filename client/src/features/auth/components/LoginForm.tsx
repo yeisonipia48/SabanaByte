@@ -10,8 +10,10 @@ import {
   Loader2,
   Lock,
   LogIn,
+  UserRound,
 } from 'lucide-react'
 import { login } from '../authService'
+import type { AuthUser, Role } from '../types'
 import BrandLogo from './BrandLogo'
 
 const DOCUMENT_TYPES = [
@@ -19,16 +21,20 @@ const DOCUMENT_TYPES = [
   { value: 'TI', label: 'TI - Tarjeta de Identidad' },
   { value: 'CE', label: 'CE - Cédula de Extranjería' },
   { value: 'PA', label: 'PA - Pasaporte' },
-  { value: 'RC', label: 'RC - Registro Civil' },
-  { value: 'PPT', label: 'PPT - Permiso por Protección Temporal' },
 ] as const
+
+const ROLES: Array<{ value: Role; label: string }> = [
+  { value: 'Paciente', label: 'Paciente' },
+  { value: 'Medico', label: 'Médico' },
+  { value: 'Administrador', label: 'Administrador' },
+]
 
 const DEFAULT_DOCUMENT_TYPE = 'CC'
 const REMEMBER_KEY = 'sabanaByte.login.remember'
-const DOCUMENT_PATTERN = /^[A-Za-z0-9-]{5,20}$/
 
 interface FormErrors {
-  docNumber?: string
+  role?: string
+  identifier?: string
   password?: string
 }
 
@@ -55,7 +61,7 @@ function readRememberedCredentials(): RememberedCredentials {
     const record = parsed as Record<string, unknown>
     const documentType =
       typeof record.documentType === 'string' &&
-        DOCUMENT_TYPES.some((type) => type.value === record.documentType)
+      DOCUMENT_TYPES.some((type) => type.value === record.documentType)
         ? record.documentType
         : DEFAULT_DOCUMENT_TYPE
     const documentNumber =
@@ -77,7 +83,7 @@ function persistRememberedCredentials(
       JSON.stringify({ documentType, documentNumber }),
     )
   } catch {
-    // Almacenamiento no disponible: el recordatorio es opcional.
+    // Almacenamiento no disponible
   }
 }
 
@@ -85,19 +91,24 @@ function clearRememberedCredentials() {
   try {
     localStorage.removeItem(REMEMBER_KEY)
   } catch {
-    // Almacenamiento no disponible: nada que limpiar.
+    // Almacenamiento no disponible
   }
 }
 
-function validateForm(documentNumber: string, password: string): FormErrors {
+function validateForm(
+  role: Role | '',
+  identifier: string,
+  password: string,
+): FormErrors {
   const errors: FormErrors = {}
-  const trimmedDocument = documentNumber.trim()
+  const trimmedIdentifier = identifier.trim()
 
-  if (!trimmedDocument) {
-    errors.docNumber = 'Ingresa tu número de identificación.'
-  } else if (!DOCUMENT_PATTERN.test(trimmedDocument)) {
-    errors.docNumber =
-      'Usa entre 5 y 20 caracteres alfanuméricos, sin espacios.'
+  if (!role) {
+    errors.role = 'Selecciona un rol para continuar.'
+  }
+
+  if (!trimmedIdentifier) {
+    errors.identifier = 'Ingresa tu usuario o número de documento.'
   }
 
   if (!password) {
@@ -120,11 +131,15 @@ function fieldClasses(hasError: boolean, spacing = 'pr-4') {
   return `${baseFieldClasses} ${spacing} ${stateClasses}`
 }
 
-function LoginForm() {
-  const [remembered] = useState(readRememberedCredentials)
+interface LoginFormProps {
+  onLoginSuccess: (user: AuthUser, token: string, remember: boolean) => void
+}
 
+function LoginForm({ onLoginSuccess }: LoginFormProps) {
+  const [remembered] = useState(readRememberedCredentials)
+  const [role, setRole] = useState<Role | ''>('')
   const [docType, setDocType] = useState(remembered.documentType)
-  const [docNumber, setDocNumber] = useState(remembered.documentNumber)
+  const [identifier, setIdentifier] = useState(remembered.documentNumber)
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(remembered.remember)
   const [showPassword, setShowPassword] = useState(false)
@@ -133,13 +148,13 @@ function LoginForm() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const docNumberRef = useRef<HTMLInputElement>(null)
+  const identifierRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  function handleDocNumberChange(value: string) {
-    setDocNumber(value)
+  function handleIdentifierChange(value: string) {
+    setIdentifier(value)
     setErrors((previous) =>
-      previous.docNumber ? { ...previous, docNumber: undefined } : previous,
+      previous.identifier ? { ...previous, identifier: undefined } : previous,
     )
     setSubmitError(null)
     setSuccessMessage(null)
@@ -149,6 +164,15 @@ function LoginForm() {
     setPassword(value)
     setErrors((previous) =>
       previous.password ? { ...previous, password: undefined } : previous,
+    )
+    setSubmitError(null)
+    setSuccessMessage(null)
+  }
+
+  function handleRoleChange(value: Role | '') {
+    setRole(value)
+    setErrors((previous) =>
+      previous.role ? { ...previous, role: undefined } : previous,
     )
     setSubmitError(null)
     setSuccessMessage(null)
@@ -166,11 +190,12 @@ function LoginForm() {
     setSubmitError(null)
     setSuccessMessage(null)
 
-    const nextErrors = validateForm(docNumber, password)
+    const nextErrors = validateForm(role, identifier, password)
     setErrors(nextErrors)
 
-    if (nextErrors.docNumber) {
-      docNumberRef.current?.focus()
+    if (nextErrors.role) return
+    if (nextErrors.identifier) {
+      identifierRef.current?.focus()
       return
     }
     if (nextErrors.password) {
@@ -182,21 +207,23 @@ function LoginForm() {
 
     try {
       const result = await login({
-
+        role: role as Role,
+        username: identifier.trim(),
         documentType: docType,
-        documentNumber: docNumber.trim(),
+        documentNumber: identifier.trim(),
         password,
         remember,
       })
 
-      if (result.ok) {
+      if (result.ok && result.user && result.token) {
         setSuccessMessage(result.message)
         setPassword('')
         if (remember) {
-          persistRememberedCredentials(docType, docNumber.trim())
+          persistRememberedCredentials(docType, identifier.trim())
         } else {
           clearRememberedCredentials()
         }
+        onLoginSuccess(result.user, result.token, remember)
       } else {
         setSubmitError(result.message)
       }
@@ -214,27 +241,24 @@ function LoginForm() {
       className="login-scroll bg-white lg:col-span-7 lg:h-dvh lg:overflow-y-auto"
       data-purpose="login-form-wrapper"
     >
-      <div className="mx-auto flex min-h-full w-full max-w-[540px] flex-col justify-between px-5 py-8 sm:px-8 sm:py-8 lg:px-10 lg:py-9 xl:px-12">
+      <div className="mx-auto flex min-h-full w-full max-w-[480px] flex-col justify-between px-5 py-8 sm:px-8 sm:py-8 lg:px-10 lg:py-9 xl:px-12">
         <div className="w-full">
-
+          <header className="mb-5 flex items-center justify-between gap-3">
+            <BrandLogo />
+          </header>
 
           <div className="mb-5">
             <h2 className="text-[26px] font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Bienvenido a tu Portal EPS
+              Bienvenido a tu Portal SabanaByte
             </h2>
             <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
-              Ingresa tus credenciales para administrar tus servicios de salud y
-              novedades de afiliación.
+              Selecciona tu rol, ingresa tus credenciales y accede a tu módulo.
             </p>
           </div>
-
-
-
 
           <div
             id="login-panel"
             role="tabpanel"
-
             className="rounded-[30px] border-2 border-t-4 border-sky-800 bg-white p-5 sm:p-6"
           >
             <form
@@ -245,38 +269,34 @@ function LoginForm() {
               onSubmit={handleSubmit}
             >
               <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <label
-                    className="text-[11px] font-bold uppercase tracking-wider text-slate-600"
-                    htmlFor="doc-type"
-                  >
-                    Tipo de Documento{' '}
-                    <span className="text-rose-500">*</span>
-                  </label>
-                  <a
-                    className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 hover:underline"
-                    href="#"
-                  >
-                    ¿Dudas con tu tipo?
-                  </a>
-                </div>
+                <label
+                  className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
+                  htmlFor="role"
+                >
+                  Rol <span className="text-rose-500">*</span>
+                </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <IdCard className="h-4 w-4" aria-hidden="true" />
+                    <UserRound className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <select
-                    className="w-full appearance-none border border-slate-300 bg-white bg-none py-2.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:text-sm"
-                    id="doc-type"
-                    value={docType}
-                    onChange={(event) => {
-                      setDocType(event.target.value)
-                      setSubmitError(null)
-                      setSuccessMessage(null)
-                    }}
+                    className={`w-full appearance-none border bg-white bg-none py-2.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:outline-none focus:ring-2 sm:text-sm ${
+                      errors.role
+                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/25'
+                        : 'border-slate-300 focus:border-sky-700 focus:ring-sky-700/25'
+                    }`}
+                    id="role"
+                    value={role}
+                    onChange={(event) =>
+                      handleRoleChange(event.target.value as Role | '')
+                    }
+                    aria-invalid={Boolean(errors.role)}
+                    aria-describedby={errors.role ? 'role-error' : undefined}
                   >
-                    {DOCUMENT_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
+                    <option value="">Selecciona un rol</option>
+                    {ROLES.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
                       </option>
                     ))}
                   </select>
@@ -284,65 +304,63 @@ function LoginForm() {
                     <ChevronDown className="h-4 w-4" aria-hidden="true" />
                   </div>
                 </div>
+                {errors.role && (
+                  <p
+                    className="mt-1.5 text-[11px] font-medium text-rose-600"
+                    id="role-error"
+                  >
+                    {errors.role}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label
                   className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
-                  htmlFor="doc-number"
+                  htmlFor="identifier"
                 >
-                  Número de Identificación{' '}
-                  <span className="text-rose-500">*</span>
+                  Usuario o Documento <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                     <Hash className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <input
-                    ref={docNumberRef}
-                    className={fieldClasses(Boolean(errors.docNumber))}
-                    id="doc-number"
+                    ref={identifierRef}
+                    className={fieldClasses(Boolean(errors.identifier))}
+                    id="identifier"
                     type="text"
                     inputMode="text"
                     autoComplete="username"
                     required
-                    placeholder="Ej. 1020345678"
-                    value={docNumber}
+                    placeholder="Ej. paciente1 o 1023456789"
+                    value={identifier}
                     onChange={(event) =>
-                      handleDocNumberChange(event.target.value)
+                      handleIdentifierChange(event.target.value)
                     }
-                    aria-invalid={Boolean(errors.docNumber)}
+                    aria-invalid={Boolean(errors.identifier)}
                     aria-describedby={
-                      errors.docNumber ? 'doc-number-error' : undefined
+                      errors.identifier ? 'identifier-error' : undefined
                     }
                   />
                 </div>
-                {errors.docNumber && (
+                {errors.identifier && (
                   <p
                     className="mt-1.5 text-[11px] font-medium text-rose-600"
-                    id="doc-number-error"
+                    id="identifier-error"
                   >
-                    {errors.docNumber}
+                    {errors.identifier}
                   </p>
                 )}
               </div>
 
               <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <label
-                    className="text-[11px] font-bold uppercase tracking-wider text-slate-600"
-                    htmlFor="password"
-                  >
-                    Contraseña de Acceso{' '}
-                    <span className="text-rose-500">*</span>
-                  </label>
-                  <a
-                    className="text-[11px] font-semibold text-sky-700 hover:text-sky-900 hover:underline"
-                    href="#"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </a>
-                </div>
+                <label
+                  className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
+                  htmlFor="password"
+                >
+                  Contraseña <span className="text-rose-500">*</span>
+                </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                     <Lock className="h-4 w-4" aria-hidden="true" />
@@ -354,7 +372,7 @@ function LoginForm() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     required
-                    placeholder="Introduce tu clave secreta"
+                    placeholder="Introduce tu contraseña"
                     value={password}
                     onChange={(event) =>
                       handlePasswordChange(event.target.value)
@@ -390,6 +408,41 @@ function LoginForm() {
                 )}
               </div>
 
+              <div>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label
+                    className="text-[11px] font-bold uppercase tracking-wider text-slate-600"
+                    htmlFor="doc-type"
+                  >
+                    Tipo de Documento
+                  </label>
+                </div>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <IdCard className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <select
+                    className="w-full appearance-none border border-slate-300 bg-white bg-none py-2.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:text-sm"
+                    id="doc-type"
+                    value={docType}
+                    onChange={(event) => {
+                      setDocType(event.target.value)
+                      setSubmitError(null)
+                      setSuccessMessage(null)
+                    }}
+                  >
+                    {DOCUMENT_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
+                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
                 <label
                   className="flex cursor-pointer select-none items-center gap-2"
@@ -405,10 +458,9 @@ function LoginForm() {
                     }
                   />
                   <span className="text-xs text-slate-600">
-                    Recordar documento en este dispositivo
+                    Recordar en este dispositivo
                   </span>
                 </label>
-
               </div>
 
               <div className="space-y-3" aria-live="polite">
@@ -460,25 +512,13 @@ function LoginForm() {
             </form>
           </div>
 
-
-          {/* <div className="mt-4 flex flex-col items-start justify-between gap-3 border-t border-slate-100 pt-3 text-[11px] font-semibold text-slate-600 sm:flex-row sm:items-center">
-            <a
-              className="flex items-center gap-1.5 text-sky-800 hover:underline"
-              href="#"
-            >
-              <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>¿Aún no tienes cuenta? Regístrate aquí</span>
-            </a>
-            <a
-              className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 hover:underline"
-              href="#"
-            >
-              <Search className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Consultar afiliación sin entrar</span>
-            </a>
-          </div>*/}
+          <div className="mt-4 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+            <p className="font-semibold text-slate-600">Credenciales de prueba:</p>
+            <p className="mt-1">Paciente: paciente1 / Paciente123*</p>
+            <p>Médico: medico1 / Medico123*</p>
+            <p>Administrador: admin1 / Admin123*</p>
+          </div>
         </div>
-
       </div>
     </section>
   )

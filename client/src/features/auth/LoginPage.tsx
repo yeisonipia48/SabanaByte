@@ -1,8 +1,13 @@
 import InstitutionalHero from './components/InstitutionalHero'
 import LoginForm from './components/LoginForm'
 import MobileBrandBanner from './components/MobileBrandBanner'
+import type { AuthUser } from './types'
 
-function LoginPage() {
+interface LoginPageProps {
+  onLoginSuccess: (user: AuthUser, token: string, remember: boolean) => void
+}
+
+function LoginPage({ onLoginSuccess }: LoginPageProps) {
   return (
     <div className="min-h-dvh bg-white text-slate-800">
       <main
@@ -17,7 +22,7 @@ function LoginPage() {
 
         <section className="flex items-center justify-center p-6 lg:col-span-5">
           <div className="w-full max-w-md">
-            <LoginForm />
+            <LoginForm onLoginSuccess={onLoginSuccess} />
           </div>
         </section>
       </main>
