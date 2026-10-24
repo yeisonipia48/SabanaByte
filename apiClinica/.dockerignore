@@ -1,0 +1,10 @@
+.mypy_cache
+.gitignore
+Dockerfile
+stack.yaml
+.app
+__pycache__
+.env
+lunch.sh
+pgbouncer.ini
+userlist.txt
