@@ -4,19 +4,22 @@ from logging.config import fileConfig
 import sys
 from pathlib import Path
 
-# Agregar la carpeta 'alembicApi' al PYTHONPATH de Python
-BASE_DIR = Path(__file__).resolve().parents[1]  # Apunta a /apiClinica/alembicApi
+# BASE_DIR apunta a la carpeta 'alembicApi' (un nivel arriba de 'appclinica')
+BASE_DIR = Path(__file__).resolve().parents[1]
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
+
+# Importar models desde alembicApi
 from models import Base
 from alembic import context
 
 config = context.config
 
+# Leer secretos de Docker Swarm
 with open('/run/secrets/postgres_user') as f:
     db_user = f.read().strip()
 

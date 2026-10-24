@@ -2,25 +2,39 @@
 
 set -e
 
-set -a
-source .env
-set +a
+# Cargar variables del archivo .env si existe
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
 
 echo "Construyendo la imagen de la API..."
-docker build --no-cache -t api-clinica:v1 . >>/dev/null 2>&1
-sleep 2
+docker build --no-cache -t api-clinica:v1 .
+
 echo "Desplegando la API en Docker Swarm..."
 sleep 2
-docker secret inspect postgres_user >>/dev/null 2>&1 || echo "$postgres_user" | docker secret create postgres_user -
-docker secret inspect postgres_password >>/dev/null 2>&1 || echo "$postgres_password" | docker secret create postgres_password -
-docker secret inspect postgres_host >>/dev/null 2>&1 || echo "$postgres_host" | docker secret create postgres_host -
-docker secret inspect postgres_db >>/dev/null 2>&1 || echo "$postgres_db" | docker secret create postgres_db -
 
-docker stack deploy -c stack.yaml api-clinica
+# Gestionar secretos de Docker Swarm de forma segura
+docker secret inspect postgres_user >/dev/null 2>&1 || echo "$postgres_user" | docker secret create postgres_user -
+docker secret inspect postgres_password >/dev/null 2>&1 || echo "$postgres_password" | docker secret create postgres_password -
+docker secret inspect postgres_host >/dev/null 2>&1 || echo "$postgres_host" | docker secret create postgres_host -
+docker secret inspect postgres_db >/dev/null 2>&1 || echo "$postgres_db" | docker secret create postgres_db -
 
-sleep 2
+# Desplegar usando el nombre correcto del stack (apiclinica_stack)
+docker stack deploy -c stack.yaml apiclinica_stack
 
-contenedor=$(docker ps | grep postgres | awk '{print$1}')
+echo "Esperando a que el contenedor de la base de datos esté listo..."
+sleep 5
 
-docker docker exec -it $contenedor psql -U $postgres_user -c "\c $postgres_db" >>/dev/null 2>&1 || docker exec -it $contenedor psql -U $postgres_user -c "CREATE DATABASE $postgres_db;"
+# Buscar el contenedor de postgres
+contenedor=$(docker ps -q --filter "name=apiclinica_stack_data")
 
+if [ -n "$contenedor" ]; then
+  echo "Verificando o creando la base de datos..."
+  docker exec -i $contenedor psql -U "$postgres_user" -c "\c $postgres_db" >/dev/null 2>&1 || \
+  docker exec -i $contenedor psql -U "$postgres_user" -c "CREATE DATABASE $postgres_db;"
+  echo "¡Proceso finalizado con éxito!"
+else
+  echo "Aviso: No se encontró el contenedor de postgres en ejecución."
+fi
