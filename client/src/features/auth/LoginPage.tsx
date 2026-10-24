@@ -10,8 +10,16 @@ function LoginPage() {
         data-purpose="public-login-page"
       >
         <MobileBrandBanner />
-        <InstitutionalHero />
-        <LoginForm />
+
+
+        <InstitutionalHero className="lg:col-span-7" />
+
+
+        <section className="flex items-center justify-center p-6 lg:col-span-5">
+          <div className="w-full max-w-md">
+            <LoginForm />
+          </div>
+        </section>
       </main>
     </div>
   )

@@ -216,10 +216,7 @@ function LoginForm() {
     >
       <div className="mx-auto flex min-h-full w-full max-w-[540px] flex-col justify-between px-5 py-8 sm:px-8 sm:py-8 lg:px-10 lg:py-9 xl:px-12">
         <div className="w-full">
-          <header className="mb-5 flex items-center justify-between gap-3">
-            <BrandLogo />
 
-          </header>
 
           <div className="mb-5">
             <h2 className="text-[26px] font-bold tracking-tight text-slate-900 sm:text-3xl">

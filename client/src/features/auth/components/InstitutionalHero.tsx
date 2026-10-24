@@ -1,10 +1,11 @@
 import { Lock, Shield, ShieldCheck } from 'lucide-react'
 import epsHero from '../../../assets/eps-hero.jpg'
+import BrandLogo from './BrandLogo'
 
-function InstitutionalHero() {
+function InstitutionalHero({ className }: { className?: string }) {
   return (
     <section
-      className="relative hidden overflow-hidden bg-sky-950 text-white lg:col-span-5 lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-12"
+      className={`relative hidden overflow-hidden bg-sky-950 text-white lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-12 ${className}`}
       data-purpose="institutional-hero"
     >
       <img
@@ -13,12 +14,9 @@ function InstitutionalHero() {
         src={epsHero}
       />
       <div className="absolute inset-0 z-10 custom-gradient-overlay" />
-
       <div className="relative z-20">
-        <span className="inline-flex items-center gap-2 border border-white/25 bg-white/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm">
-          <Shield className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
-          Red Integral de Salud Colombia
-        </span>
+        <BrandLogo tone="light" />
+
 
         <h1 className="mt-7 max-w-md text-4xl font-extrabold leading-[1.08] tracking-tight text-white xl:text-[2.75rem]">
           Tu salud y la de tu familia en las mejores manos
