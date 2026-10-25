@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from schemas import PacienteCreadoResponseSchema, PacienteCreateSchema, PacienteResponseSchema, PacienteUpdateSchema, UsuarioCreateSchema, RolCreateSchema, RolResponseSchema, UsuarioResponseSchema, UsuarioCreadoResponseSchema, UsuarioUpdateSchema
 from schemas import MedicoUpdateSchema, MedicoCreateSchema, MedicoCreadoResponseSchema, MedicoResponseSchema, LoginSchema, RegistroUsuarioSchema
 from repository import UsuariosRepository, get_con, PacientesRepository, MedicosRepository, AuthenticationRepository,AgendaRepository
-from schemas import AgendaCreateSchema, AgendaCreateResponseSchema, AgendaResponseSchema
+from schemas import AgendaCreateSchema, AgendaCreateResponseSchema, AgendaResponseSchema, AgendaUpdateSchema
 from alembicApi import models
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Any, List
@@ -204,3 +204,21 @@ async def crear_agenda(data: AgendaCreateSchema, repository: AgendaRepository = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@app.patch("/agenda/{id_agenda}", response_model=AgendaCreateResponseSchema)
+async def actualizar_agenda(id_agenda: int, data: AgendaUpdateSchema, repository: AgendaRepository = Depends())->models.Agenda_Medicas:
+    try:
+        agenda = await repository.actualizar_agenda(data, id_agenda)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+@app.delete("/agenda/{id_agenda}", response_model=str)
+async def eliminar_agenda(id_agenda:int, repository: AgendaRepository = Depends()):
+    try:
+        agenda = await repository.eliminar_agenda(id_agenda)
+        return agenda
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))   

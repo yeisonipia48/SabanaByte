@@ -184,4 +184,12 @@ class AgendaResponseSchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class AgendaUpdateSchema(BaseModel):
+    id_medico: int | None = None
+    fecha_inicio: date | None = None
+    fecha_fin: date | None = None
+    duracion_cita: int | None = None
+    hora_inicio: time  | None = None
+    hora_fin: time | None = None
+
     

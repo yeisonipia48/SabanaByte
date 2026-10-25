@@ -4,7 +4,7 @@ from functools import lru_cache
 from sqlalchemy import select
 from alembicApi import models
 from schemas import PacienteUpdateSchema, UsuarioCreateSchema, RolCreateSchema, UsuarioUpdateSchema, PacienteCreateSchema
-from schemas import MedicoCreateSchema, MedicoUpdateSchema, LoginSchema, RegistroUsuarioSchema, AgendaCreateSchema
+from schemas import MedicoCreateSchema, MedicoUpdateSchema, LoginSchema, RegistroUsuarioSchema, AgendaCreateSchema, AgendaUpdateSchema
 from dbconexion import Conexion
 from typing import Any, AsyncGenerator, List
 from Security.security import hash_password, verify_password
@@ -376,6 +376,28 @@ class AgendaRepository:
         await self.session.commit()
         await self.session.refresh(nueva_agenda)
         return nueva_agenda
+
+    async def actualizar_agenda(self, data: AgendaUpdateSchema, id_agenda:int)-> models.Agenda_Medicas:
+
+        agenda = self.session.get(models.Agenda_Medicas, id_agenda)
+
+        if not agenda:
+            raise ValueError(f"No existe agenda con id: {id_agenda}")
+        for d,v in data.model_dump(exclude_unset=True).items():
+            setattr(agenda, d, v)
+        await self.session.commit()
+        await self.session.refresh(agenda)
+        return agenda
+
+    async def eliminar_agenda(self, id_agenda: int):
+
+        agenda = self.session.get(models.Agenda_Medicas, id_agenda)
+        
+        if not agenda:
+            raise ValueError(f"No existe agenda con id: {id_agenda}")
+        await self.session.delete(agenda)
+        await self.session.commit()
+        return "Agenda eliminada"
 
 
 
