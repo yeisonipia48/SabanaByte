@@ -121,7 +121,7 @@ function validateForm(
 }
 
 const baseFieldClasses =
-  'w-full border bg-white py-2.5 pl-10 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:outline-none focus:ring-2 sm:text-sm'
+  'w-full border bg-white py-2 pl-10 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:outline-none focus:ring-2 sm:py-2.5 sm:text-sm'
 
 function fieldClasses(hasError: boolean, spacing = 'pr-4') {
   const stateClasses = hasError
@@ -238,20 +238,20 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
   return (
     <section
-      className="login-scroll bg-white lg:col-span-7 lg:h-dvh lg:overflow-y-auto"
+      className="flex h-full min-h-0 flex-col bg-white"
       data-purpose="login-form-wrapper"
     >
-      <div className="mx-auto flex min-h-full w-full max-w-[480px] flex-col justify-between px-5 py-8 sm:px-8 sm:py-8 lg:px-10 lg:py-9 xl:px-12">
+      <div className="login-scroll mx-auto flex min-h-0 w-full max-w-[480px] flex-1 flex-col justify-start overflow-y-auto px-4 py-5 sm:px-6 sm:py-6 lg:justify-center lg:px-10 lg:py-8 xl:px-12">
         <div className="w-full">
-          <header className="mb-5 flex items-center justify-between gap-3">
+          <header className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
             <BrandLogo />
           </header>
 
-          <div className="mb-5">
-            <h2 className="text-[26px] font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <div className="mb-4 sm:mb-5">
+            <h2 className="text-[22px] font-bold tracking-tight text-slate-900 sm:text-3xl">
               Bienvenido a tu Portal SabanaByte
             </h2>
-            <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-500 sm:mt-2 sm:text-sm">
               Selecciona tu rol, ingresa tus credenciales y accede a tu módulo.
             </p>
           </div>
@@ -259,10 +259,10 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
           <div
             id="login-panel"
             role="tabpanel"
-            className="rounded-[30px] border-2 border-t-4 border-sky-800 bg-white p-5 sm:p-6"
+            className="rounded-[30px] border-2 border-t-4 border-sky-800 bg-white p-4 sm:p-5 lg:p-6"
           >
             <form
-              className="space-y-4"
+              className="space-y-3 sm:space-y-4"
               data-purpose="auth-form"
               noValidate
               aria-busy={isSubmitting}
@@ -280,7 +280,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                     <UserRound className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <select
-                    className={`w-full appearance-none border bg-white bg-none py-2.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:outline-none focus:ring-2 sm:text-sm ${
+                    className={`w-full appearance-none border bg-white bg-none py-2 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:outline-none focus:ring-2 sm:py-2.5 sm:text-sm ${
                       errors.role
                         ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/25'
                         : 'border-slate-300 focus:border-sky-700 focus:ring-sky-700/25'
@@ -422,7 +422,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                     <IdCard className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <select
-                    className="w-full appearance-none border border-slate-300 bg-white bg-none py-2.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:text-sm"
+                    className="w-full appearance-none border border-slate-300 bg-white bg-none py-2 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:py-2.5 sm:text-sm"
                     id="doc-type"
                     value={docType}
                     onChange={(event) => {
@@ -492,7 +492,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
               <div className="pt-1">
                 <button
-                  className="flex w-full items-center justify-center gap-2 bg-sky-800 px-4 py-3 text-[13px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-sky-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800 disabled:cursor-not-allowed disabled:bg-sky-800/70 disabled:hover:bg-sky-800/70"
+                  className="flex w-full items-center justify-center gap-2 bg-sky-800 px-4 py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-sky-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800 disabled:cursor-not-allowed disabled:bg-sky-800/70 disabled:hover:bg-sky-800/70 sm:py-3 sm:text-[13px]"
                   type="submit"
                   disabled={isSubmitting}
                 >
@@ -512,7 +512,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
             </form>
           </div>
 
-          <div className="mt-4 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+          <div className="mt-3 border-t border-slate-100 pt-2.5 text-[10px] text-slate-500 sm:mt-4 sm:pt-3 sm:text-[11px] max-[760px]:hidden">
             <p className="font-semibold text-slate-600">Credenciales de prueba:</p>
             <p className="mt-1">Paciente: paciente1 / Paciente123*</p>
             <p>Médico: medico1 / Medico123*</p>

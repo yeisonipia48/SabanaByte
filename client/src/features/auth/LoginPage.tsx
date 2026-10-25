@@ -9,21 +9,17 @@ interface LoginPageProps {
 
 function LoginPage({ onLoginSuccess }: LoginPageProps) {
   return (
-    <div className="min-h-dvh bg-white text-slate-800">
+    <div className="h-dvh overflow-hidden bg-white text-slate-800">
       <main
-        className="grid min-h-dvh grid-cols-1 bg-white lg:h-dvh lg:grid-cols-12"
+        className="grid h-dvh grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-white lg:grid-cols-12 lg:grid-rows-1"
         data-purpose="public-login-page"
       >
         <MobileBrandBanner />
 
+        <InstitutionalHero className="lg:col-span-5" />
 
-        <InstitutionalHero className="lg:col-span-7" />
-
-
-        <section className="flex items-center justify-center p-6 lg:col-span-5">
-          <div className="w-full max-w-md">
-            <LoginForm onLoginSuccess={onLoginSuccess} />
-          </div>
+        <section className="min-h-0 lg:col-span-7">
+          <LoginForm onLoginSuccess={onLoginSuccess} />
         </section>
       </main>
     </div>
