@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 import sys
@@ -17,17 +18,22 @@ from alembic import context
 
 config = context.config
 
-with open('/run/secrets/postgres_user') as f:
-    db_user = f.read().strip()
+def _leer_secreto(nombre: str) -> str:
+    ruta = Path(f"/run/secrets/{nombre}")
+    if ruta.exists():
+        return ruta.read_text().strip()
+    valor = os.getenv(nombre)
+    if valor is None:
+        raise RuntimeError(
+            f"No se encontró el secreto {nombre} ni la variable de entorno {nombre}"
+        )
+    return valor
 
-with open('/run/secrets/postgres_password') as f:
-    password = f.read().strip()
 
-with open('/run/secrets/postgres_host') as f:
-    host = f.read().strip()
-
-with open('/run/secrets/postgres_db') as f:
-    db = f.read().strip()
+db_user = _leer_secreto("postgres_user")
+password = _leer_secreto("postgres_password")
+host = _leer_secreto("postgres_host")
+db = _leer_secreto("postgres_db")
 
 url_db = f'postgresql+asyncpg://{db_user}:{password}@{host}:6432/{db}'
 

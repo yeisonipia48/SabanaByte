@@ -8,6 +8,7 @@ set +a
 
 echo "Construyendo la imagen de la API..."
 docker build --no-cache -t api-clinica:v1 . >>/dev/null 2>&1
+docker build --no-cache -t frontendcitas:v1 TestPhp/. >>/dev/null 2>&1
 sleep 2
 echo "Desplegando la API en Docker Swarm..."
 sleep 2
@@ -18,9 +19,18 @@ docker secret inspect postgres_db >>/dev/null 2>&1 || echo "$postgres_db" | dock
 
 docker stack deploy -c stack.yaml api-clinica
 
-sleep 2
+echo "Actualizando servicios con las nuevas imágenes..."
+docker service update --force --image api-clinica:v1 api-clinica_api
+docker service update --force --image frontendcitas:v1 api-clinica_frontend
 
-contenedor=$(docker ps | grep postgres | awk '{print$1}')
+contenedor_frontend=$(docker ps -q -f name=api-clinica_frontend | head -n1)
+if [ -n "$contenedor_frontend" ]; then
+    docker cp TestPhp/. "$contenedor_frontend":/var/www/html/
+fi
 
-docker docker exec -it $contenedor psql -U $postgres_user -c "\c $postgres_db" >>/dev/null 2>&1 || docker exec -it $contenedor psql -U $postgres_user -c "CREATE DATABASE $postgres_db;"
+contenedor=$(docker ps -q -f name=api-clinica_data | head -n1)
+if [ -n "$contenedor" ]; then
+    docker exec "$contenedor" psql -U "$postgres_user" -d "$postgres_db" -c 'SELECT 1;' >>/dev/null 2>&1 \
+        || docker exec "$contenedor" psql -U "$postgres_user" -c "CREATE DATABASE $postgres_db;"
+fi
 
