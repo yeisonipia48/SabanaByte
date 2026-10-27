@@ -1,4 +1,4 @@
-import { Lock, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import epsHero from '../../../assets/eps-hero.jpg'
 import BrandLogo from './BrandLogo'
 
@@ -35,13 +35,7 @@ function InstitutionalHero({ className }: { className?: string }) {
             />
             Vigilado Superintendencia Nacional de Salud
           </span>
-          <span className="flex items-center gap-1.5">
-            <Lock
-              className="h-3.5 w-3.5 shrink-0 text-emerald-300"
-              aria-hidden="true"
-            />
-            Conexión Cifrada SSL
-          </span>
+         
         </div>
       </div>
     </section>

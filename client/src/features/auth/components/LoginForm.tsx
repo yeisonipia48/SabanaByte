@@ -9,8 +9,11 @@ import {
   Loader2,
   Lock,
   LogIn,
+  Mail,
+  UserPlus,
+  UserRound,
 } from 'lucide-react'
-import { login } from '../authService'
+import { login, register } from '../authService'
 import type { AuthUser } from '../types'
 import BrandLogo from './BrandLogo'
 
@@ -27,6 +30,9 @@ const REMEMBER_KEY = 'sabanaByte.login.remember'
 interface FormErrors {
   documentNumber?: string
   password?: string
+  fullName?: string
+  email?: string
+  confirmPassword?: string
 }
 
 interface RememberedCredentials {
@@ -86,7 +92,7 @@ function clearRememberedCredentials() {
   }
 }
 
-function validateForm(
+function validateLoginForm(
   documentNumber: string,
   password: string,
 ): FormErrors {
@@ -101,6 +107,50 @@ function validateForm(
     errors.password = 'Ingresa tu contraseña.'
   } else if (password.length < 6) {
     errors.password = 'La contraseña debe tener al menos 6 caracteres.'
+  }
+
+  return errors
+}
+
+function validateRegisterForm(
+  documentNumber: string,
+  fullName: string,
+  email: string,
+  password: string,
+  confirmPassword: string,
+): FormErrors {
+  const errors: FormErrors = {}
+  const trimmedDocumentNumber = documentNumber.trim()
+  const trimmedFullName = fullName.trim()
+  const trimmedEmail = email.trim()
+
+  if (!trimmedDocumentNumber) {
+    errors.documentNumber = 'Ingresa tu número de documento.'
+  }
+
+  if (!trimmedFullName) {
+    errors.fullName = 'Ingresa tu nombre completo.'
+  }
+
+  if (!trimmedEmail) {
+    errors.email = 'Ingresa tu correo electrónico.'
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(trimmedEmail)) {
+      errors.email = 'Ingresa un correo electrónico válido.'
+    }
+  }
+
+  if (!password) {
+    errors.password = 'Ingresa tu contraseña.'
+  } else if (password.length < 6) {
+    errors.password = 'La contraseña debe tener al menos 6 caracteres.'
+  }
+
+  if (!confirmPassword) {
+    errors.confirmPassword = 'Confirma tu contraseña.'
+  } else if (password && confirmPassword && password !== confirmPassword) {
+    errors.confirmPassword = 'Las contraseñas no coinciden.'
   }
 
   return errors
@@ -121,13 +171,20 @@ interface LoginFormProps {
   onLoginSuccess: (user: AuthUser, token: string, remember: boolean) => void
 }
 
+type AuthMode = 'login' | 'register'
+
 function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [remembered] = useState(readRememberedCredentials)
+  const [mode, setMode] = useState<AuthMode>('login')
   const [docType, setDocType] = useState(remembered.documentType)
   const [documentNumber, setDocumentNumber] = useState(remembered.documentNumber)
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [remember, setRemember] = useState(remembered.remember)
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -135,28 +192,87 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
   const documentNumberRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
+  const fullNameRef = useRef<HTMLInputElement>(null)
+  const emailRef = useRef<HTMLInputElement>(null)
+  const confirmPasswordRef = useRef<HTMLInputElement>(null)
 
-  function handleDocumentNumberChange(value: string) {
-    setDocumentNumber(value)
-    setErrors((previous) =>
-      previous.documentNumber ? { ...previous, documentNumber: undefined } : previous,
-    )
+  function clearMessages() {
     setSubmitError(null)
     setSuccessMessage(null)
   }
 
+  function handleDocumentNumberChange(value: string) {
+    setDocumentNumber(value)
+    setErrors((previous) => {
+      const next = { ...previous }
+      if (next.documentNumber) delete next.documentNumber
+      return next
+    })
+    clearMessages()
+  }
+
+  function handleFullNameChange(value: string) {
+    setFullName(value)
+    setErrors((previous) => {
+      const next = { ...previous }
+      if (next.fullName) delete next.fullName
+      return next
+    })
+    clearMessages()
+  }
+
+  function handleEmailChange(value: string) {
+    setEmail(value)
+    setErrors((previous) => {
+      const next = { ...previous }
+      if (next.email) delete next.email
+      return next
+    })
+    clearMessages()
+  }
+
   function handlePasswordChange(value: string) {
     setPassword(value)
-    setErrors((previous) =>
-      previous.password ? { ...previous, password: undefined } : previous,
-    )
-    setSubmitError(null)
-    setSuccessMessage(null)
+    setErrors((previous) => {
+      const next = { ...previous }
+      if (next.password) delete next.password
+      if (next.confirmPassword) delete next.confirmPassword
+      return next
+    })
+    clearMessages()
+  }
+
+  function handleConfirmPasswordChange(value: string) {
+    setConfirmPassword(value)
+    setErrors((previous) => {
+      const next = { ...previous }
+      if (next.confirmPassword) delete next.confirmPassword
+      return next
+    })
+    clearMessages()
   }
 
   function handleRememberChange(checked: boolean) {
     setRemember(checked)
     if (!checked) clearRememberedCredentials()
+  }
+
+  function switchToLogin() {
+    setMode('login')
+    setErrors({})
+    setSubmitError(null)
+    setSuccessMessage(null)
+    setConfirmPassword('')
+    setShowConfirmPassword(false)
+    setIsSubmitting(false)
+  }
+
+  function switchToRegister() {
+    setMode('register')
+    setErrors({})
+    setSubmitError(null)
+    setSuccessMessage(null)
+    setIsSubmitting(false)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -166,31 +282,93 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setSubmitError(null)
     setSuccessMessage(null)
 
-    const nextErrors = validateForm(documentNumber, password)
+    if (mode === 'login') {
+      const nextErrors = validateLoginForm(documentNumber, password)
+      setErrors(nextErrors)
+
+      if (nextErrors.documentNumber) {
+        documentNumberRef.current?.focus()
+        return
+      }
+      if (nextErrors.password) {
+        passwordRef.current?.focus()
+        return
+      }
+
+      setIsSubmitting(true)
+
+      try {
+        const result = await login({
+          documentType: docType,
+          documentNumber: documentNumber.trim(),
+          password,
+          remember,
+        })
+
+        if (result.ok && result.user && result.token) {
+          setSuccessMessage(result.message)
+          setPassword('')
+          if (remember) {
+            persistRememberedCredentials(docType, documentNumber.trim())
+          } else {
+            clearRememberedCredentials()
+          }
+          onLoginSuccess(result.user, result.token, remember)
+        } else {
+          setSubmitError(result.message)
+        }
+      } catch {
+        setSubmitError(
+          'Ocurrió un error inesperado. Intenta de nuevo en unos segundos.',
+        )
+      } finally {
+        setIsSubmitting(false)
+      }
+
+      return
+    }
+
+    const nextErrors = validateRegisterForm(documentNumber, fullName, email, password, confirmPassword)
     setErrors(nextErrors)
 
     if (nextErrors.documentNumber) {
       documentNumberRef.current?.focus()
       return
     }
+    if (nextErrors.fullName) {
+      fullNameRef.current?.focus()
+      return
+    }
+    if (nextErrors.email) {
+      emailRef.current?.focus()
+      return
+    }
     if (nextErrors.password) {
       passwordRef.current?.focus()
+      return
+    }
+    if (nextErrors.confirmPassword) {
+      confirmPasswordRef.current?.focus()
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      const result = await login({
+      const result = await register({
         documentType: docType,
         documentNumber: documentNumber.trim(),
+        fullName,
+        email,
         password,
+        confirmPassword,
         remember,
       })
 
       if (result.ok && result.user && result.token) {
         setSuccessMessage(result.message)
         setPassword('')
+        setConfirmPassword('')
         if (remember) {
           persistRememberedCredentials(docType, documentNumber.trim())
         } else {
@@ -222,10 +400,12 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
           <div className="mb-2 sm:mb-3 lg:mb-3">
             <h2 className="text-[22px] font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Bienvenido a tu Portal SabanaByte
+              {mode === 'login' ? 'Bienvenido a tu Portal SabanaByte' : 'Crea tu cuenta en SabanaByte'}
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-500 sm:mt-1.5 sm:text-sm">
-              Ingresa tu número de documento y contraseña para acceder a tu portal.
+              {mode === 'login'
+                ? 'Ingresa tu número de documento y contraseña para acceder a tu portal.'
+                : 'Regístrate como Paciente para agendar y gestionar tus citas médicas.'}
             </p>
           </div>
 
@@ -291,7 +471,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                     id="documentNumber"
                     type="text"
                     inputMode="numeric"
-                    autoComplete="username"
+                    autoComplete={mode === 'login' ? 'username' : 'off'}
                     required
                     placeholder="Ej. 1023456789"
                     value={documentNumber}
@@ -314,6 +494,80 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 )}
               </div>
 
+              {mode === 'register' && (
+                <>
+                  <div>
+                    <label
+                      className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
+                      htmlFor="fullName"
+                    >
+                      Nombre completo <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                        <UserRound className="h-4 w-4" aria-hidden="true" />
+                      </div>
+                      <input
+                        ref={fullNameRef}
+                        className={fieldClasses(Boolean(errors.fullName))}
+                        id="fullName"
+                        type="text"
+                        autoComplete="name"
+                        required
+                        placeholder="Ej. Ana María López Rodríguez"
+                        value={fullName}
+                        onChange={(event) => handleFullNameChange(event.target.value)}
+                        aria-invalid={Boolean(errors.fullName)}
+                        aria-describedby={errors.fullName ? 'fullName-error' : undefined}
+                      />
+                    </div>
+                    {errors.fullName && (
+                      <p
+                        className="mt-1.5 text-[11px] font-medium text-rose-600"
+                        id="fullName-error"
+                      >
+                        {errors.fullName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
+                      htmlFor="email"
+                    >
+                      Correo electrónico <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                        <Mail className="h-4 w-4" aria-hidden="true" />
+                      </div>
+                      <input
+                        ref={emailRef}
+                        className={fieldClasses(Boolean(errors.email))}
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        placeholder="Ej. ana.lopez@correo.com"
+                        value={email}
+                        onChange={(event) => handleEmailChange(event.target.value)}
+                        aria-invalid={Boolean(errors.email)}
+                        aria-describedby={errors.email ? 'email-error' : undefined}
+                      />
+                    </div>
+                    {errors.email && (
+                      <p
+                        className="mt-1.5 text-[11px] font-medium text-rose-600"
+                        id="email-error"
+                      >
+                        {errors.email}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+
               <div>
                 <label
                   className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
@@ -330,9 +584,9 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                     className={fieldClasses(Boolean(errors.password), 'pr-10')}
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                     required
-                    placeholder="Introduce tu contraseña"
+                    placeholder={mode === 'login' ? 'Introduce tu contraseña' : 'Crea una contraseña'}
                     value={password}
                     onChange={(event) =>
                       handlePasswordChange(event.target.value)
@@ -367,6 +621,60 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                   </p>
                 )}
               </div>
+
+              {mode === 'register' && (
+                <div>
+                  <label
+                    className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
+                    htmlFor="confirmPassword"
+                  >
+                    Confirmar contraseña <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                      <Lock className="h-4 w-4" aria-hidden="true" />
+                    </div>
+                    <input
+                      ref={confirmPasswordRef}
+                      className={fieldClasses(Boolean(errors.confirmPassword), 'pr-10')}
+                      id="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      placeholder="Repite tu contraseña"
+                      value={confirmPassword}
+                      onChange={(event) => handleConfirmPasswordChange(event.target.value)}
+                      aria-invalid={Boolean(errors.confirmPassword)}
+                      aria-describedby={
+                        errors.confirmPassword ? 'confirmPassword-error' : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-700"
+                      aria-label={
+                        showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
+                      }
+                      aria-pressed={showConfirmPassword}
+                      onClick={() => setShowConfirmPassword((visible) => !visible)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p
+                      className="mt-1.5 text-[11px] font-medium text-rose-600"
+                      id="confirmPassword-error"
+                    >
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
                 <label
@@ -426,15 +734,49 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                       className="h-4 w-4 animate-spin"
                       aria-hidden="true"
                     />
-                  ) : (
+                  ) : mode === 'login' ? (
                     <LogIn className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <UserPlus className="h-4 w-4" aria-hidden="true" />
                   )}
                   <span>
-                    {isSubmitting ? 'Ingresando…' : 'Ingresar al Portal'}
+                    {isSubmitting
+                      ? mode === 'login'
+                        ? 'Ingresando…'
+                        : 'Registrando…'
+                      : mode === 'login'
+                        ? 'Ingresar al Portal'
+                        : 'Registrarme como Paciente'}
                   </span>
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="mt-2 text-center text-xs text-slate-600 sm:mt-2.5">
+            {mode === 'login' ? (
+              <p>
+                ¿No tienes cuenta?{' '}
+                <button
+                  type="button"
+                  className="font-semibold text-sky-800 underline-offset-2 hover:text-sky-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800"
+                  onClick={switchToRegister}
+                >
+                  Registrarte
+                </button>
+              </p>
+            ) : (
+              <p>
+                ¿Ya tienes cuenta?{' '}
+                <button
+                  type="button"
+                  className="font-semibold text-sky-800 underline-offset-2 hover:text-sky-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-800"
+                  onClick={switchToLogin}
+                >
+                  Iniciar sesión
+                </button>
+              </p>
+            )}
           </div>
 
           <div className="mt-2 border-t border-slate-100 pt-2 text-[10px] text-slate-500 sm:mt-2.5 sm:pt-2 sm:text-[11px] max-[760px]:hidden">

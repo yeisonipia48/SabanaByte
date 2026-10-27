@@ -8,6 +8,16 @@ export interface LoginPayload {
   remember: boolean
 }
 
+export interface RegisterPayload {
+  documentType: string
+  documentNumber: string
+  fullName: string
+  email: string
+  password: string
+  confirmPassword: string
+  remember: boolean
+}
+
 export interface AuthUser {
   id: string
   fullName: string
@@ -19,6 +29,13 @@ export interface AuthUser {
 }
 
 export interface LoginResult {
+  ok: boolean
+  message: string
+  user?: AuthUser
+  token?: string
+}
+
+export interface RegisterResult {
   ok: boolean
   message: string
   user?: AuthUser
