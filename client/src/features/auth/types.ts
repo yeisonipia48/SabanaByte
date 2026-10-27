@@ -1,7 +1,6 @@
 export type Role = 'Paciente' | 'Medico' | 'Administrador'
 
 export interface LoginPayload {
-  role: Role
   username?: string
   documentType?: string
   documentNumber: string

@@ -5,15 +5,13 @@ import {
   CircleAlert,
   Eye,
   EyeOff,
-  Hash,
   IdCard,
   Loader2,
   Lock,
   LogIn,
-  UserRound,
 } from 'lucide-react'
 import { login } from '../authService'
-import type { AuthUser, Role } from '../types'
+import type { AuthUser } from '../types'
 import BrandLogo from './BrandLogo'
 
 const DOCUMENT_TYPES = [
@@ -23,18 +21,11 @@ const DOCUMENT_TYPES = [
   { value: 'PA', label: 'PA - Pasaporte' },
 ] as const
 
-const ROLES: Array<{ value: Role; label: string }> = [
-  { value: 'Paciente', label: 'Paciente' },
-  { value: 'Medico', label: 'Médico' },
-  { value: 'Administrador', label: 'Administrador' },
-]
-
 const DEFAULT_DOCUMENT_TYPE = 'CC'
 const REMEMBER_KEY = 'sabanaByte.login.remember'
 
 interface FormErrors {
-  role?: string
-  identifier?: string
+  documentNumber?: string
   password?: string
 }
 
@@ -61,7 +52,7 @@ function readRememberedCredentials(): RememberedCredentials {
     const record = parsed as Record<string, unknown>
     const documentType =
       typeof record.documentType === 'string' &&
-        DOCUMENT_TYPES.some((type) => type.value === record.documentType)
+      DOCUMENT_TYPES.some((type) => type.value === record.documentType)
         ? record.documentType
         : DEFAULT_DOCUMENT_TYPE
     const documentNumber =
@@ -96,19 +87,14 @@ function clearRememberedCredentials() {
 }
 
 function validateForm(
-  role: Role | '',
-  identifier: string,
+  documentNumber: string,
   password: string,
 ): FormErrors {
   const errors: FormErrors = {}
-  const trimmedIdentifier = identifier.trim()
+  const trimmedDocumentNumber = documentNumber.trim()
 
-  if (!role) {
-    errors.role = 'Selecciona un rol para continuar.'
-  }
-
-  if (!trimmedIdentifier) {
-    errors.identifier = 'Ingresa tu usuario o número de documento.'
+  if (!trimmedDocumentNumber) {
+    errors.documentNumber = 'Ingresa tu número de documento.'
   }
 
   if (!password) {
@@ -137,9 +123,8 @@ interface LoginFormProps {
 
 function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [remembered] = useState(readRememberedCredentials)
-  const [role, setRole] = useState<Role | ''>('')
   const [docType, setDocType] = useState(remembered.documentType)
-  const [identifier, setIdentifier] = useState(remembered.documentNumber)
+  const [documentNumber, setDocumentNumber] = useState(remembered.documentNumber)
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(remembered.remember)
   const [showPassword, setShowPassword] = useState(false)
@@ -148,13 +133,13 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const identifierRef = useRef<HTMLInputElement>(null)
+  const documentNumberRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  function handleIdentifierChange(value: string) {
-    setIdentifier(value)
+  function handleDocumentNumberChange(value: string) {
+    setDocumentNumber(value)
     setErrors((previous) =>
-      previous.identifier ? { ...previous, identifier: undefined } : previous,
+      previous.documentNumber ? { ...previous, documentNumber: undefined } : previous,
     )
     setSubmitError(null)
     setSuccessMessage(null)
@@ -164,15 +149,6 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setPassword(value)
     setErrors((previous) =>
       previous.password ? { ...previous, password: undefined } : previous,
-    )
-    setSubmitError(null)
-    setSuccessMessage(null)
-  }
-
-  function handleRoleChange(value: Role | '') {
-    setRole(value)
-    setErrors((previous) =>
-      previous.role ? { ...previous, role: undefined } : previous,
     )
     setSubmitError(null)
     setSuccessMessage(null)
@@ -190,12 +166,11 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setSubmitError(null)
     setSuccessMessage(null)
 
-    const nextErrors = validateForm(role, identifier, password)
+    const nextErrors = validateForm(documentNumber, password)
     setErrors(nextErrors)
 
-    if (nextErrors.role) return
-    if (nextErrors.identifier) {
-      identifierRef.current?.focus()
+    if (nextErrors.documentNumber) {
+      documentNumberRef.current?.focus()
       return
     }
     if (nextErrors.password) {
@@ -207,10 +182,8 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
     try {
       const result = await login({
-        role: role as Role,
-        username: identifier.trim(),
         documentType: docType,
-        documentNumber: identifier.trim(),
+        documentNumber: documentNumber.trim(),
         password,
         remember,
       })
@@ -219,7 +192,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
         setSuccessMessage(result.message)
         setPassword('')
         if (remember) {
-          persistRememberedCredentials(docType, identifier.trim())
+          persistRememberedCredentials(docType, documentNumber.trim())
         } else {
           clearRememberedCredentials()
         }
@@ -252,7 +225,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
               Bienvenido a tu Portal SabanaByte
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-500 sm:mt-1.5 sm:text-sm">
-              Selecciona tu rol, ingresa tus credenciales y accede a tu módulo.
+              Ingresa tu número de documento y contraseña para acceder a tu portal.
             </p>
           </div>
 
@@ -271,31 +244,27 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
               <div>
                 <label
                   className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
-                  htmlFor="role"
+                  htmlFor="doc-type"
                 >
-                  Rol <span className="text-rose-500">*</span>
+                  Tipo de Documento
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <UserRound className="h-4 w-4" aria-hidden="true" />
+                    <IdCard className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <select
-                    className={`w-full appearance-none border bg-white bg-none py-1.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:outline-none focus:ring-2 sm:py-2 sm:text-sm ${errors.role
-                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/25'
-                        : 'border-slate-300 focus:border-sky-700 focus:ring-sky-700/25'
-                      }`}
-                    id="role"
-                    value={role}
-                    onChange={(event) =>
-                      handleRoleChange(event.target.value as Role | '')
-                    }
-                    aria-invalid={Boolean(errors.role)}
-                    aria-describedby={errors.role ? 'role-error' : undefined}
+                    className="w-full appearance-none border border-slate-300 bg-white bg-none py-1.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:py-2 sm:text-sm"
+                    id="doc-type"
+                    value={docType}
+                    onChange={(event) => {
+                      setDocType(event.target.value)
+                      setSubmitError(null)
+                      setSuccessMessage(null)
+                    }}
                   >
-                    <option value="">Selecciona un rol</option>
-                    {ROLES.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
+                    {DOCUMENT_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
                       </option>
                     ))}
                   </select>
@@ -303,52 +272,44 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                     <ChevronDown className="h-4 w-4" aria-hidden="true" />
                   </div>
                 </div>
-                {errors.role && (
-                  <p
-                    className="mt-1.5 text-[11px] font-medium text-rose-600"
-                    id="role-error"
-                  >
-                    {errors.role}
-                  </p>
-                )}
               </div>
 
               <div>
                 <label
                   className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
-                  htmlFor="identifier"
+                  htmlFor="documentNumber"
                 >
-                  Usuario o Documento <span className="text-rose-500">*</span>
+                  Número de documento <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <Hash className="h-4 w-4" aria-hidden="true" />
+                    <IdCard className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <input
-                    ref={identifierRef}
-                    className={fieldClasses(Boolean(errors.identifier))}
-                    id="identifier"
+                    ref={documentNumberRef}
+                    className={fieldClasses(Boolean(errors.documentNumber))}
+                    id="documentNumber"
                     type="text"
-                    inputMode="text"
+                    inputMode="numeric"
                     autoComplete="username"
                     required
-                    placeholder="Ej. paciente1 o 1023456789"
-                    value={identifier}
+                    placeholder="Ej. 1023456789"
+                    value={documentNumber}
                     onChange={(event) =>
-                      handleIdentifierChange(event.target.value)
+                      handleDocumentNumberChange(event.target.value)
                     }
-                    aria-invalid={Boolean(errors.identifier)}
+                    aria-invalid={Boolean(errors.documentNumber)}
                     aria-describedby={
-                      errors.identifier ? 'identifier-error' : undefined
+                      errors.documentNumber ? 'documentNumber-error' : undefined
                     }
                   />
                 </div>
-                {errors.identifier && (
+                {errors.documentNumber && (
                   <p
                     className="mt-1.5 text-[11px] font-medium text-rose-600"
-                    id="identifier-error"
+                    id="documentNumber-error"
                   >
-                    {errors.identifier}
+                    {errors.documentNumber}
                   </p>
                 )}
               </div>
@@ -405,41 +366,6 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
                     {errors.password}
                   </p>
                 )}
-              </div>
-
-              <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <label
-                    className="text-[11px] font-bold uppercase tracking-wider text-slate-600"
-                    htmlFor="doc-type"
-                  >
-                    Tipo de Documento
-                  </label>
-                </div>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                    <IdCard className="h-4 w-4" aria-hidden="true" />
-                  </div>
-                  <select
-                    className="w-full appearance-none border border-slate-300 bg-white bg-none py-1.5 pl-10 pr-10 text-xs text-slate-900 transition-colors focus:border-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:py-2 sm:text-sm"
-                    id="doc-type"
-                    value={docType}
-                    onChange={(event) => {
-                      setDocType(event.target.value)
-                      setSubmitError(null)
-                      setSuccessMessage(null)
-                    }}
-                  >
-                    {DOCUMENT_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
-                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                  </div>
-                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
@@ -513,9 +439,9 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
 
           <div className="mt-2 border-t border-slate-100 pt-2 text-[10px] text-slate-500 sm:mt-2.5 sm:pt-2 sm:text-[11px] max-[760px]:hidden">
             <p className="font-semibold text-slate-600">Credenciales de prueba:</p>
-            <p className="mt-0.5">Paciente: paciente1 / Paciente123*</p>
-            <p>Médico: medico1 / Medico123*</p>
-            <p>Administrador: admin1 / Admin123*</p>
+            <p className="mt-0.5">Paciente: 1023456789 / Paciente123*</p>
+            <p>Médico: 1034567890 / Medico123*</p>
+            <p>Administrador: 1045678901 / Admin123*</p>
           </div>
         </div>
       </div>

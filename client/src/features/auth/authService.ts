@@ -66,27 +66,21 @@ export function isAuthenticated(): boolean {
 
 /**
  * Autenticación simulada.
- * Valida contra usuarios mock con credenciales por rol.
+ * Valida contra usuarios mock por número de documento y contraseña.
+ * El rol se infiere desde el registro del usuario.
  * Punto de integración: reemplazar por petición HTTP real manteniendo la firma.
  */
 export async function login(payload: LoginPayload): Promise<LoginResult> {
   await wait(SIMULATED_DELAY_MS)
 
-  if (!payload.role) {
-    return {
-      ok: false,
-      message: 'Selecciona un rol para continuar.',
-    }
-  }
-
   const username = payload.username?.trim()
   const documentNumber = payload.documentNumber?.trim()
   const password = payload.password
 
-  if ((!username && !documentNumber) || !password) {
+  if (!documentNumber || !password) {
     return {
       ok: false,
-      message: 'Ingresa tu usuario o documento y tu contraseña.',
+      message: 'Ingresa tu número de documento y tu contraseña.',
     }
   }
 
@@ -94,13 +88,12 @@ export async function login(payload: LoginPayload): Promise<LoginResult> {
     username,
     documentNumber,
     password,
-    role: payload.role,
   })
 
   if (!user) {
     return {
       ok: false,
-      message: 'Usuario, contraseña o rol incorrectos. Verifica tus credenciales.',
+      message: 'Número de documento o contraseña incorrectos. Verifica tus credenciales.',
     }
   }
 

@@ -52,18 +52,16 @@ export function findMockUser(credentials: {
   username?: string
   documentNumber?: string
   password: string
-  role: Role
 }): MockUser | undefined {
   const username = credentials.username?.trim().toLowerCase()
   const documentNumber = credentials.documentNumber?.trim()
 
   return MOCK_USERS.find((user) => {
     if (!user.active) return false
-    if (user.role !== credentials.role) return false
     if (user.password !== credentials.password) return false
 
-    if (username && user.username.toLowerCase() === username) return true
     if (documentNumber && user.documentNumber === documentNumber) return true
+    if (username && user.username.toLowerCase() === username) return true
 
     return false
   })
