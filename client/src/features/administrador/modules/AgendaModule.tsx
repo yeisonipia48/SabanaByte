@@ -193,7 +193,7 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.doctorId}
-            onChange={(event) => {
+            onChange={(event: any) => {
               const doctorId = event.target.value
               const m = medicos.find((x) => x.id === doctorId)
               setForm((prev) => ({ ...prev, doctorId, specialtyId: m?.specialtyId ?? prev.specialtyId }))
@@ -212,7 +212,7 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.specialtyId}
-            onChange={(event) => setForm((prev) => ({ ...prev, specialtyId: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, specialtyId: event.target.value }))}
           >
             <option value="">Seleccionar</option>
             {especialidades.map((e) => (
@@ -228,7 +228,7 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.date}
-            onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, date: event.target.value }))}
           />
           <AdminFormField
             label="Hora"
@@ -237,7 +237,7 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.time}
-            onChange={(event) => setForm((prev) => ({ ...prev, time: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, time: event.target.value }))}
           />
           <AdminFormField
             label="Estado"
@@ -245,7 +245,7 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as AgendaEstado }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, status: event.target.value as AgendaEstado }))}
           >
             {ESTADOS.map((estado) => (
               <option key={estado} value={estado}>

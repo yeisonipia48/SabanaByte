@@ -175,7 +175,7 @@ function EspecialidadesModule() {
             required
             disabled={mode === 'view'}
             value={form.name}
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, name: event.target.value }))}
           />
           <AdminFormField
             label="Descripción"
@@ -183,7 +183,7 @@ function EspecialidadesModule() {
             required
             disabled={mode === 'view'}
             value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, description: event.target.value }))}
           />
         </div>
       </AdminModal>

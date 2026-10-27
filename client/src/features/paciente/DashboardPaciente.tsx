@@ -1,6 +1,10 @@
-import DashboardLayout from '../../layouts/DashboardLayout'
+import { useState } from 'react'
+import { Calendar, CalendarClock, Home, ListOrdered } from 'lucide-react'
 import type { AuthUser } from '../auth/types'
-import { Calendar, FileText, ClipboardList, User } from 'lucide-react'
+import PacienteLayout, { type PacienteModuleKey } from '../../layouts/PacienteLayout'
+import PacienteCitasModule from './modules/PacienteCitasModule'
+import PacienteAgendaModule from './modules/PacienteAgendaModule'
+import PacienteListaEsperaModule from './modules/PacienteListaEsperaModule'
 
 interface DashboardPacienteProps {
   user: AuthUser
@@ -8,52 +12,74 @@ interface DashboardPacienteProps {
 }
 
 const navItems = [
-  { label: 'Inicio', active: true },
-  { label: 'Mis citas médicas' },
-  { label: 'Historial clínico' },
-  { label: 'Resultados de exámenes' },
-  { label: 'Autorizaciones' },
-  { label: 'Perfil' },
+  { key: 'inicio' as const, label: 'Inicio', icon: <Home className="h-4 w-4" /> },
+  { key: 'citas' as const, label: 'Citas', icon: <Calendar className="h-4 w-4" /> },
+  { key: 'agenda' as const, label: 'Agenda', icon: <CalendarClock className="h-4 w-4" /> },
+  { key: 'lista-espera' as const, label: 'Lista de Espera', icon: <ListOrdered className="h-4 w-4" /> },
 ]
 
 function DashboardPaciente({ user, onLogout }: DashboardPacienteProps) {
+  const [activeModule, setActiveModule] = useState<PacienteModuleKey>('inicio')
+
+  const renderModule = () => {
+    switch (activeModule) {
+      case 'citas':
+        return <PacienteCitasModule />
+      case 'agenda':
+        return <PacienteAgendaModule />
+      case 'lista-espera':
+        return <PacienteListaEsperaModule />
+      case 'inicio':
+      default:
+        return (
+          <div className="space-y-4">
+            <div className="border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                Módulo Paciente
+              </h1>
+              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+                Gestiona tus citas, agenda y lista de espera
+              </p>
+              <div className="mt-3 border-l-4 border-sky-700 bg-sky-50 px-3 py-2.5 text-xs text-sky-900 sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
+                Bienvenido(a) <strong>{user.fullName}</strong>, has ingresado como{' '}
+                <strong>{user.role}</strong>.
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {navItems
+                .filter((item) => item.key !== 'inicio')
+                .map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setActiveModule(item.key)}
+                    className="flex flex-col items-start gap-2 border border-slate-200 bg-white p-3 text-left transition-colors hover:bg-slate-50"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center border border-slate-200 text-sky-700">
+                      {item.icon}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+                      <p className="text-xs text-slate-500">Administrar</p>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )
+    }
+  }
+
   return (
-    <DashboardLayout
+    <PacienteLayout
       user={user}
       onLogout={onLogout}
-      title="Módulo Paciente"
-      subtitle="Gestiona tus citas, resultados y autorizaciones"
+      activeModule={activeModule}
+      onModuleChange={setActiveModule}
       navItems={navItems}
     >
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <div className="border border-slate-200 bg-white p-3 sm:p-4">
-          <Calendar className="h-5 w-5 text-sky-700" aria-hidden="true" />
-          <p className="mt-2 text-xs font-semibold text-slate-900 sm:text-sm">
-            Mis citas médicas
-          </p>
-          <p className="mt-1 hidden text-xs text-slate-500 sm:block">Consulta y agenda</p>
-        </div>
-        <div className="border border-slate-200 bg-white p-3 sm:p-4">
-          <FileText className="h-5 w-5 text-sky-700" aria-hidden="true" />
-          <p className="mt-2 text-xs font-semibold text-slate-900 sm:text-sm">
-            Historial clínico
-          </p>
-          <p className="mt-1 hidden text-xs text-slate-500 sm:block">Atenciones previas</p>
-        </div>
-        <div className="border border-slate-200 bg-white p-3 sm:p-4">
-          <ClipboardList className="h-5 w-5 text-sky-700" aria-hidden="true" />
-          <p className="mt-2 text-xs font-semibold text-slate-900 sm:text-sm">
-            Resultados de exámenes
-          </p>
-          <p className="mt-1 hidden text-xs text-slate-500 sm:block">Descarga y consulta</p>
-        </div>
-        <div className="border border-slate-200 bg-white p-3 sm:p-4">
-          <User className="h-5 w-5 text-sky-700" aria-hidden="true" />
-          <p className="mt-2 text-xs font-semibold text-slate-900 sm:text-sm">Perfil</p>
-          <p className="mt-1 hidden text-xs text-slate-500 sm:block">Datos personales</p>
-        </div>
-      </div>
-    </DashboardLayout>
+      {renderModule()}
+    </PacienteLayout>
   )
 }
 

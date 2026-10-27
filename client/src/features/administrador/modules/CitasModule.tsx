@@ -203,7 +203,7 @@ function CitasModule() {
             required
             disabled={mode === 'view'}
             value={form.patientId}
-            onChange={(event) => setForm((prev) => ({ ...prev, patientId: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, patientId: event.target.value }))}
           >
             <option value="">Seleccionar</option>
             {pacientes.map((p) => (
@@ -218,7 +218,7 @@ function CitasModule() {
             required
             disabled={mode === 'view'}
             value={form.doctorId}
-            onChange={(event) => {
+            onChange={(event: any) => {
               const doctorId = event.target.value
               const m = medicos.find((x) => x.id === doctorId)
               setForm((prev) => ({
@@ -241,7 +241,7 @@ function CitasModule() {
             required
             disabled={mode === 'view'}
             value={form.specialtyId}
-            onChange={(event) => setForm((prev) => ({ ...prev, specialtyId: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, specialtyId: event.target.value }))}
           >
             <option value="">Seleccionar</option>
             {especialidades.map((e) => (
@@ -257,7 +257,7 @@ function CitasModule() {
             required
             disabled={mode === 'view'}
             value={form.date}
-            onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, date: event.target.value }))}
           />
           <AdminFormField
             label="Hora"
@@ -266,7 +266,7 @@ function CitasModule() {
             required
             disabled={mode === 'view'}
             value={form.time}
-            onChange={(event) => setForm((prev) => ({ ...prev, time: event.target.value }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, time: event.target.value }))}
           />
           <AdminFormField
             label="Estado"
@@ -274,7 +274,7 @@ function CitasModule() {
             required
             disabled={mode === 'view'}
             value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as CitaEstado }))}
+            onChange={(event: any) => setForm((prev) => ({ ...prev, status: event.target.value as CitaEstado }))}
           >
             {ESTADOS.map((estado) => (
               <option key={estado} value={estado}>
