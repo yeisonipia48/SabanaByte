@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../components/AdminToolbar'
 import AdminDataTable from '../components/AdminDataTable'
@@ -113,7 +113,7 @@ function PacientesModule() {
       return
     }
     if (mode === 'create') {
-      const created = adminService.addPaciente(form)
+      adminService.addPaciente(form)
       setItems(adminService.getPacientes())
       setModalOpen(false)
       return
@@ -236,7 +236,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.documentType}
-            onChange={(event) =>
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setForm((prev) => ({ ...prev, documentType: event.target.value as DocumentType }))
             }
           >
@@ -252,7 +252,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.documentNumber}
-            onChange={(event) => setForm((prev) => ({ ...prev, documentNumber: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, documentNumber: event.target.value }))}
           />
           <AdminFormField
             label="Correo electrónico"
@@ -261,7 +261,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.email}
-            onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, email: event.target.value }))}
           />
           <AdminFormField
             label={mode === 'edit' ? 'Contraseña (opcional)' : 'Contraseña'}
@@ -270,7 +270,7 @@ function PacientesModule() {
             required={mode === 'create'}
             disabled={mode === 'view'}
             value={form.password}
-            onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, password: event.target.value }))}
           />
           <AdminFormField
             label="Nombres"
@@ -278,7 +278,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.firstName}
-            onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
           />
           <AdminFormField
             label="Apellidos"
@@ -286,7 +286,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.lastName}
-            onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
           />
           <AdminFormField
             label="Fecha de nacimiento"
@@ -295,7 +295,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.birthDate}
-            onChange={(event) => setForm((prev) => ({ ...prev, birthDate: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, birthDate: event.target.value }))}
           />
           <AdminFormField
             label="Teléfono"
@@ -303,7 +303,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.phone}
-            onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
           />
           <AdminFormField
             label="Dirección"
@@ -311,7 +311,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.address}
-            onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, address: event.target.value }))}
           />
           <AdminFormField
             label="EPS"
@@ -319,7 +319,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.eps}
-            onChange={(event) => setForm((prev) => ({ ...prev, eps: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, eps: event.target.value }))}
           />
           <AdminFormField
             label="Grupo sanguíneo"
@@ -327,7 +327,7 @@ function PacientesModule() {
             required
             disabled={mode === 'view'}
             value={form.bloodType}
-            onChange={(event) =>
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setForm((prev) => ({ ...prev, bloodType: event.target.value as Paciente['bloodType'] }))
             }
           >
