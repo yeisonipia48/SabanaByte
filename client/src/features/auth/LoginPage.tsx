@@ -16,9 +16,9 @@ function LoginPage({ onLoginSuccess }: LoginPageProps) {
       >
         <MobileBrandBanner />
 
-        <InstitutionalHero className="lg:col-span-5" />
+        <InstitutionalHero className="lg:col-span-7" />
 
-        <section className="min-h-0 lg:col-span-7">
+        <section className="h-full min-h-0 overflow-hidden lg:col-span-5">
           <LoginForm onLoginSuccess={onLoginSuccess} />
         </section>
       </main>

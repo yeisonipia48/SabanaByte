@@ -5,7 +5,7 @@ import BrandLogo from './BrandLogo'
 function InstitutionalHero({ className }: { className?: string }) {
   return (
     <section
-      className={`relative hidden overflow-hidden bg-sky-950 text-white lg:flex lg:flex-col lg:justify-between lg:p-8 xl:p-12 ${className}`}
+      className={`relative hidden overflow-hidden bg-sky-950 text-white lg:flex lg:flex-col lg:justify-between lg:p-8 xl:p-10 ${className}`}
       data-purpose="institutional-hero"
     >
       <img
