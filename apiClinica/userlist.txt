@@ -1,1 +1,1 @@
-"admin" "admin"
+"postgres" "admin"

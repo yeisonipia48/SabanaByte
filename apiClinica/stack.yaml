@@ -107,6 +107,4 @@ secrets:
 networks:
   net_api:
     driver: overlay
-    ipam:
-      config:
-        - subnet: 10.20.30.0/28
+   
