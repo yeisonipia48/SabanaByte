@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Path, Query, status, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from schemas import PacienteCreadoResponseSchema, PacienteCreateSchema, PacienteResponseSchema, PacienteUpdateSchema, UsuarioCreateSchema, RolCreateSchema, RolResponseSchema, UsuarioResponseSchema, UsuarioCreadoResponseSchema, UsuarioUpdateSchema
@@ -78,6 +79,24 @@ app = FastAPI(
         },
     ],
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8082",
+        "http://127.0.0.1:8082",
+    ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.exception_handler(ErrorApi)

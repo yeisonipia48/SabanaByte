@@ -21,6 +21,7 @@ docker secret inspect postgres_db >/dev/null 2>&1 || echo "$postgres_db" | docke
 
 echo "Desplegando el stack en Docker Swarm..."
 docker stack deploy -c stack.yaml apiclinica_stack
+docker service update --force apiclinica_stack_api
 
 echo "Esperando a que los servicios inicien..."
 sleep 5
