@@ -5,120 +5,463 @@ import type {
   ListaEspera,
   Medico,
   Paciente,
+  UsuarioAdmin,
 } from '../types/admin'
 import {
-  mockAgenda,
-  mockCitas,
-  mockEspecialidades,
-  mockListaEspera,
-  mockMedicos,
-  mockPacientes,
-} from '../data/mockAdminData'
+  agendaService,
+  citasService,
+  cuposService,
+  listaEsperaService,
+  medicosService,
+  pacientesService,
+  usuariosService,
+} from '../../../services'
+import { httpClient } from '../../../lib/httpClient'
+import { API_CONFIG } from '../../../config/api'
+import type { RegistroUsuarioApiRequest } from '../../../types/api/auth'
 
-let pacientes: Paciente[] = [...mockPacientes]
-let medicos: Medico[] = [...mockMedicos]
-let especialidades: Especialidad[] = [...mockEspecialidades]
-let citas: Cita[] = [...mockCitas]
-let agenda: Agenda[] = [...mockAgenda]
-let listaEspera: ListaEspera[] = [...mockListaEspera]
-
-function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-}
+const DEFAULT_ESPECIALIDADES: Especialidad[] = [
+  { id: 'Medicina General', name: 'Medicina General', description: 'Atención primaria y diagnóstico integral' },
+  { id: 'Cardiología', name: 'Cardiología', description: 'Prevención y tratamiento de enfermedades cardíacas' },
+  { id: 'Pediatría', name: 'Pediatría', description: 'Cuidado y salud infantil' },
+  { id: 'Dermatología', name: 'Dermatología', description: 'Cuidado y tratamiento de la piel' },
+  { id: 'Neurología', name: 'Neurología', description: 'Trastornos del sistema nervioso' },
+  { id: 'Ortopedia', name: 'Ortopedia', description: 'Salud ósea, articular y muscular' },
+  { id: 'Oftalmología', name: 'Oftalmología', description: 'Salud visual y ocular' },
+  { id: 'Ginecología', name: 'Ginecología', description: 'Salud de la mujer y maternidad' },
+]
 
 export const adminService = {
-  // Pacientes
-  getPacientes: () => [...pacientes],
-  addPaciente: (data: Omit<Paciente, 'id'>) => {
-    const item: Paciente = { ...data, id: generateId('pac') }
-    pacientes = [...pacientes, item]
-    return item
-  },
-  updatePaciente: (id: string, data: Partial<Paciente>) => {
-    pacientes = pacientes.map((p) => (p.id === id ? { ...p, ...data } : p))
-    return pacientes.find((p) => p.id === id) ?? null
-  },
-  removePaciente: (id: string) => {
-    pacientes = pacientes.filter((p) => p.id !== id)
-  },
-
-  // Médicos
-  getMedicos: () => [...medicos],
-  addMedico: (data: Omit<Medico, 'id'>) => {
-    const item: Medico = { ...data, id: generateId('med') }
-    medicos = [...medicos, item]
-    return item
-  },
-  updateMedico: (id: string, data: Partial<Medico>) => {
-    medicos = medicos.map((m) => (m.id === id ? { ...m, ...data } : m))
-    return medicos.find((m) => m.id === id) ?? null
-  },
-  removeMedico: (id: string) => {
-    medicos = medicos.filter((m) => m.id !== id)
+  // ==================== PACIENTES ====================
+  async getPacientes(): Promise<Paciente[]> {
+    const apiData = await pacientesService.getAll()
+    return apiData.map((p) => ({
+      id: String(p.id),
+      documentType: 'CC',
+      documentNumber: p.numero_documento,
+      email: p.email,
+      firstName: p.nombres,
+      lastName: p.apellidos,
+      birthDate: p.fecha_nacimiento,
+      phone: p.telefono,
+      address: p.direccion ?? '',
+      eps: 'Compensar',
+      bloodType: 'O+',
+    }))
   },
 
-  // Especialidades
-  getEspecialidades: () => [...especialidades],
-  addEspecialidad: (data: Omit<Especialidad, 'id'>) => {
-    const item: Especialidad = { ...data, id: generateId('esp') }
-    especialidades = [...especialidades, item]
-    return item
-  },
-  updateEspecialidad: (id: string, data: Partial<Especialidad>) => {
-    especialidades = especialidades.map((e) => (e.id === id ? { ...e, ...data } : e))
-    return especialidades.find((e) => e.id === id) ?? null
-  },
-  removeEspecialidad: (id: string) => {
-    especialidades = especialidades.filter((e) => e.id !== id)
+  async addPaciente(data: Omit<Paciente, 'id'>): Promise<Paciente> {
+    const payload: RegistroUsuarioApiRequest = {
+      id_rol: 3, // Rol Paciente en PostgreSQL
+      tipo_documento: data.documentType,
+      numero_documento: data.documentNumber.trim(),
+      email: data.email.trim(),
+      password: data.password?.trim() || 'Paciente123*',
+      nombres: data.firstName.trim(),
+      apellidos: data.lastName.trim(),
+      fecha_nacimiento: data.birthDate || '2000-01-01',
+      telefono: data.phone?.trim() || '0000000000',
+      direccion: data.address?.trim() || null,
+    }
+
+    await httpClient.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload)
+
+    // Consultar el paciente recién creado en PostgreSQL
+    const all = await pacientesService.getAll()
+    const created = all.find((p) => p.numero_documento === payload.numero_documento)
+    if (created) {
+      return {
+        id: String(created.id),
+        documentType: data.documentType,
+        documentNumber: created.numero_documento,
+        email: created.email,
+        firstName: created.nombres,
+        lastName: created.apellidos,
+        birthDate: created.fecha_nacimiento,
+        phone: created.telefono,
+        address: created.direccion ?? '',
+        eps: data.eps || 'Compensar',
+        bloodType: data.bloodType || 'O+',
+      }
+    }
+
+    return {
+      id: String(Date.now()),
+      ...data,
+    }
   },
 
-  // Citas
-  getCitas: () => [...citas],
-  addCita: (data: Omit<Cita, 'id'>) => {
-    const item: Cita = { ...data, id: generateId('cit') }
-    citas = [...citas, item]
-    return item
-  },
-  updateCita: (id: string, data: Partial<Cita>) => {
-    citas = citas.map((c) => (c.id === id ? { ...c, ...data } : c))
-    return citas.find((c) => c.id === id) ?? null
-  },
-  removeCita: (id: string) => {
-    citas = citas.filter((c) => c.id !== id)
+  async updatePaciente(id: string, data: Partial<Paciente>): Promise<void> {
+    await pacientesService.update(Number(id), {
+      nombres: data.firstName ?? null,
+      apellidos: data.lastName ?? null,
+      fecha_nacimiento: data.birthDate ?? null,
+      telefono: data.phone ?? null,
+      direccion: data.address ?? null,
+    })
   },
 
-  // Agenda
-  getAgenda: () => [...agenda],
-  addAgenda: (data: Omit<Agenda, 'id'>) => {
-    // evitar duplicados
-    const exists = agenda.some(
-      (a) => a.doctorId === data.doctorId && a.date === data.date && a.time === data.time,
-    )
-    if (exists) return null
-    const item: Agenda = { ...data, id: generateId('age') }
-    agenda = [...agenda, item]
-    return item
-  },
-  updateAgenda: (id: string, data: Partial<Agenda>) => {
-    agenda = agenda.map((a) => (a.id === id ? { ...a, ...data } : a))
-    return agenda.find((a) => a.id === id) ?? null
-  },
-  removeAgenda: (id: string) => {
-    agenda = agenda.filter((a) => a.id !== id)
+  async removePaciente(id: string): Promise<void> {
+    await pacientesService.remove(Number(id))
   },
 
-  // Lista de espera
-  getListaEspera: () => [...listaEspera],
-  addListaEspera: (data: Omit<ListaEspera, 'id'>) => {
-    const item: ListaEspera = { ...data, id: generateId('lst') }
-    listaEspera = [...listaEspera, item]
-    return item
+  // ==================== MÉDICOS ====================
+  async getMedicos(): Promise<Medico[]> {
+    const apiData = await medicosService.getAll()
+    return apiData.map((m) => ({
+      id: String(m.id),
+      documentType: 'CC',
+      documentNumber: m.numero_documento,
+      email: m.email,
+      firstName: m.nombres,
+      lastName: m.apellidos,
+      specialtyId: m.especialidad,
+      phone: m.telefono,
+      tarjetaProfesional: m.tarjeta_profesional,
+      consultorio: m.consultorio,
+    }))
   },
-  updateListaEspera: (id: string, data: Partial<ListaEspera>) => {
-    listaEspera = listaEspera.map((l) => (l.id === id ? { ...l, ...data } : l))
-    return listaEspera.find((l) => l.id === id) ?? null
+
+  async addMedico(data: Omit<Medico, 'id'>): Promise<Medico> {
+    const payload: RegistroUsuarioApiRequest = {
+      id_rol: 2, // Rol Médico en PostgreSQL
+      tipo_documento: data.documentType,
+      numero_documento: data.documentNumber.trim(),
+      email: data.email.trim(),
+      password: data.password?.trim() || 'Medico123*',
+      nombres: data.firstName.trim(),
+      apellidos: data.lastName.trim(),
+      telefono: data.phone?.trim() || '0000000000',
+      tarjeta_profesional: data.tarjetaProfesional?.trim() || `TP-${Date.now().toString().slice(-6)}`,
+      especialidad: data.specialtyId?.trim() || 'Medicina General',
+      consultorio: data.consultorio?.trim() || 'Consultorio 101',
+    }
+
+    await httpClient.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload)
+
+    const all = await medicosService.getAll()
+    const created = all.find((m) => m.numero_documento === payload.numero_documento)
+    if (created) {
+      return {
+        id: String(created.id),
+        documentType: data.documentType,
+        documentNumber: created.numero_documento,
+        email: created.email,
+        firstName: created.nombres,
+        lastName: created.apellidos,
+        specialtyId: created.especialidad,
+        phone: created.telefono,
+        tarjetaProfesional: created.tarjeta_profesional,
+        consultorio: created.consultorio,
+      }
+    }
+
+    return {
+      id: String(Date.now()),
+      ...data,
+    }
   },
-  removeListaEspera: (id: string) => {
-    listaEspera = listaEspera.filter((l) => l.id !== id)
+
+  async updateMedico(id: string, data: Partial<Medico>): Promise<void> {
+    await medicosService.update(Number(id), {
+      nombres: data.firstName ?? null,
+      apellidos: data.lastName ?? null,
+      telefono: data.phone ?? null,
+      tarjeta_profesional: data.tarjetaProfesional ?? null,
+      especialidad: data.specialtyId ?? null,
+      consultorio: data.consultorio ?? null,
+    })
+  },
+
+  async removeMedico(id: string): Promise<void> {
+    await medicosService.remove(Number(id))
+  },
+
+  // ==================== CITAS ====================
+  async getCitas(): Promise<Cita[]> {
+    const apiData = await citasService.getAll()
+    return apiData.map((c) => ({
+      id: String(c.id),
+      patientId: String(c.id_paciente),
+      doctorId: String(c.id_medico),
+      specialtyId: c.especialidad,
+      date: c.fecha_cupo,
+      time: c.hora_cupo?.slice(0, 5) ?? '',
+      status:
+        c.estado === 'atendida'
+          ? 'Atendida'
+          : c.estado === 'cancelada'
+            ? 'Cancelada'
+            : c.estado === 'no_asistio'
+              ? 'No asistió'
+              : 'Programada',
+      idCupo: String(c.id_cupo),
+      motivoConsulta: c.motivo_consulta ?? undefined,
+    }))
+  },
+
+  async addCita(data: Omit<Cita, 'id'>): Promise<Cita> {
+    let cupoId: number | null = null
+
+    if (data.idCupo) {
+      cupoId = Number(data.idCupo)
+    } else {
+      // Buscar si ya existe un cupo disponible para el médico en esa fecha
+      const disponibles = await cuposService.getDisponibles({
+        id_medico: Number(data.doctorId),
+        fecha_inicio: data.date,
+        fecha_fin: data.date,
+      })
+
+      const match = disponibles.find(
+        (c) => c.fecha_cupo === data.date && (data.time ? c.hora_cupo.startsWith(data.time) : true),
+      )
+
+      if (match) {
+        cupoId = match.id_cupo
+      } else {
+        // Si no existe, crear la agenda médica y generar los cupos correspondientes
+        const horaInicio = data.time ? data.time.slice(0, 5) : '08:00'
+        const [h, m] = horaInicio.split(':').map(Number)
+        const horaFin = `${String(Math.min(23, (h || 8) + 1)).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`
+
+        const nuevaAgenda = await agendaService.create({
+          id_medico: Number(data.doctorId),
+          fecha_inicio: data.date,
+          fecha_fin: data.date,
+          hora_inicio: horaInicio,
+          hora_fin: horaFin,
+          duracion_cita: 30,
+        })
+
+        await agendaService.generarCupos(nuevaAgenda.id)
+
+        const recienGenerados = await cuposService.getDisponibles({
+          id_medico: Number(data.doctorId),
+          fecha_inicio: data.date,
+          fecha_fin: data.date,
+        })
+
+        if (recienGenerados.length > 0) {
+          cupoId = recienGenerados[0].id_cupo
+        }
+      }
+    }
+
+    if (!cupoId) {
+      throw new Error('No se pudo encontrar ni generar un cupo disponible para esta cita.')
+    }
+
+    const created = await citasService.create({
+      id_cupo: cupoId,
+      id_paciente: Number(data.patientId),
+      motivo_consulta: data.motivoConsulta || 'Consulta médica programada',
+    })
+
+    return {
+      id: String(created.id),
+      patientId: String(created.id_paciente),
+      doctorId: data.doctorId,
+      specialtyId: data.specialtyId,
+      date: data.date,
+      time: data.time,
+      status: 'Programada',
+      idCupo: String(created.id_cupo),
+      motivoConsulta: created.motivo_consulta ?? undefined,
+    }
+  },
+
+  async updateCita(id: string, data: Partial<Cita>): Promise<void> {
+    if (data.status === 'Cancelada') {
+      await citasService.cancelar(Number(id))
+      return
+    }
+
+    const estadoMap: Record<string, 'confirmada' | 'atendida' | 'no_asistio'> = {
+      Programada: 'confirmada',
+      Atendida: 'atendida',
+      'No asistió': 'no_asistio',
+    }
+
+    const estadoBackend = data.status ? estadoMap[data.status] : undefined
+    if (estadoBackend) {
+      await citasService.actualizarAsistencia(Number(id), estadoBackend)
+    }
+  },
+
+  async removeCita(id: string): Promise<void> {
+    await citasService.cancelar(Number(id))
+  },
+
+  // ==================== AGENDA ====================
+  async getAgenda(): Promise<Agenda[]> {
+    const medicos = await medicosService.getAll()
+    const allAgendas: Agenda[] = []
+
+    for (const m of medicos) {
+      try {
+        const agendasMedico = await agendaService.getByMedico(m.id)
+        for (const ag of agendasMedico) {
+          allAgendas.push({
+            id: String(ag.id),
+            doctorId: String(m.id),
+            specialtyId: m.especialidad,
+            date: ag.fecha_inicio,
+            time: ag.hora_inicio?.slice(0, 5) ?? '',
+            status: ag.estado === 'activo' ? 'Disponible' : 'Ocupado',
+            duracionMinutos: ag.duracion_cita,
+          })
+        }
+      } catch {
+        // Ignorar si el médico aún no tiene agendas
+      }
+    }
+
+    return allAgendas
+  },
+
+  async addAgenda(data: Omit<Agenda, 'id'>): Promise<Agenda> {
+    const horaInicio = data.time ? data.time.slice(0, 5) : '08:00'
+    const [h, m] = horaInicio.split(':').map(Number)
+    const horaFin = `${String(Math.min(23, (h || 8) + 4)).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`
+
+    const created = await agendaService.create({
+      id_medico: Number(data.doctorId),
+      fecha_inicio: data.date,
+      fecha_fin: data.date,
+      hora_inicio: horaInicio,
+      hora_fin: horaFin,
+      duracion_cita: data.duracionMinutos || 30,
+    })
+
+    // Generar cupos en PostgreSQL automáticamente
+    try {
+      await agendaService.generarCupos(created.id)
+    } catch {
+      // Cupos ya generados o procesados
+    }
+
+    return {
+      id: String(created.id),
+      doctorId: String(created.id_medico),
+      specialtyId: data.specialtyId,
+      date: created.fecha_inicio,
+      time: created.hora_inicio?.slice(0, 5) ?? horaInicio,
+      status: 'Disponible',
+      duracionMinutos: created.duracion_cita,
+    }
+  },
+
+  async updateAgenda(id: string, data: Partial<Agenda>): Promise<void> {
+    await agendaService.update(Number(id), {
+      fecha_inicio: data.date ?? null,
+      hora_inicio: data.time ?? null,
+      estado: data.status === 'Disponible' ? 'activo' : 'inactivo',
+    })
+  },
+
+  async removeAgenda(id: string): Promise<void> {
+    await agendaService.remove(Number(id))
+  },
+
+  // ==================== LISTA DE ESPERA ====================
+  async getListaEspera(): Promise<ListaEspera[]> {
+    const apiData = await listaEsperaService.getAll()
+    return apiData.map((l) => ({
+      id: String(l.id),
+      patientId: String(l.id_paciente),
+      doctorId: l.id_medico ? String(l.id_medico) : '',
+      specialtyId: l.especialidad ?? l.especialidad_ofrecida ?? '',
+      date: l.fecha_cupo ?? l.fecha_solicitud?.slice(0, 10) ?? '',
+      time: l.hora_cupo?.slice(0, 5) ?? '',
+      status:
+        l.estado === 'aceptada'
+          ? 'Atendido'
+          : l.estado === 'cancelada'
+            ? 'Cancelado'
+            : 'En espera',
+    }))
+  },
+
+  async addListaEspera(data: Omit<ListaEspera, 'id'>): Promise<ListaEspera> {
+    const created = await listaEsperaService.create({
+      id_paciente: Number(data.patientId),
+      id_medico: data.doctorId ? Number(data.doctorId) : null,
+      prioridad: 1,
+    })
+
+    return {
+      id: String(created.id),
+      patientId: String(created.id_paciente),
+      doctorId: created.id_medico ? String(created.id_medico) : '',
+      specialtyId: data.specialtyId,
+      date: created.fecha_solicitud?.slice(0, 10) ?? '',
+      time: '',
+      status: 'En espera',
+    }
+  },
+
+  async updateListaEspera(id: string, data: Partial<ListaEspera>): Promise<void> {
+    if (data.status === 'Cancelado') {
+      await listaEsperaService.cancelar(Number(id))
+    } else if (data.status === 'Atendido') {
+      await listaEsperaService.aceptarOferta(Number(id))
+    }
+  },
+
+  async removeListaEspera(id: string): Promise<void> {
+    await listaEsperaService.cancelar(Number(id))
+  },
+
+  // ==================== USUARIOS ====================
+  async getUsuarios(): Promise<UsuarioAdmin[]> {
+    const apiData = await usuariosService.getAll()
+    return apiData.map((u) => ({
+      id: String(u.id),
+      rol: u.rol,
+      documentType: (u.tipo_documento as any) || 'CC',
+      documentNumber: u.numero_documento,
+      email: u.email,
+      isActive: u.is_active,
+      createdAt: u.created_at,
+    }))
+  },
+
+  async addUsuario(data: {
+    id_rol: number
+    tipo_documento: string
+    numero_documento: string
+    email: string
+    password?: string
+  }): Promise<void> {
+    await usuariosService.create({
+      id_rol: data.id_rol,
+      tipo_documento: data.tipo_documento,
+      numero_documento: data.numero_documento.trim(),
+      email: data.email.trim(),
+      password: data.password?.trim() || 'Usuario123*',
+    })
+  },
+
+  async updateUsuario(
+    id: string,
+    data: { id_rol?: number; email?: string; is_active?: boolean },
+  ): Promise<void> {
+    await usuariosService.update(Number(id), {
+      id_rol: data.id_rol ?? null,
+      email: data.email ?? null,
+      is_active: data.is_active ?? null,
+    })
+  },
+
+  async removeUsuario(id: string): Promise<void> {
+    await usuariosService.remove(Number(id))
+  },
+
+  // ==================== ESPECIALIDADES ====================
+  getEspecialidades(): Especialidad[] {
+    return DEFAULT_ESPECIALIDADES
   },
 }
+
+export default adminService

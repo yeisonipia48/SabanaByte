@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../components/AdminToolbar'
 import AdminDataTable from '../components/AdminDataTable'
@@ -6,7 +6,7 @@ import AdminModal from '../components/AdminModal'
 import AdminFormField from '../components/AdminFormField'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { adminService } from '../services/adminService'
-import type { Agenda, AgendaEstado } from '../types/admin'
+import type { Agenda, AgendaEstado, Medico } from '../types/admin'
 
 const ESTADOS: AgendaEstado[] = ['Disponible', 'Ocupado', 'Bloqueado']
 
@@ -16,6 +16,7 @@ interface FormState {
   date: string
   time: string
   status: AgendaEstado
+  duracionMinutos: number
 }
 
 const emptyForm: FormState = {
@@ -24,12 +25,15 @@ const emptyForm: FormState = {
   date: '',
   time: '',
   status: 'Disponible',
+  duracionMinutos: 30,
 }
 
 function AgendaModule() {
-  const [items, setItems] = useState<Agenda[]>(() => adminService.getAgenda())
-  const [medicos] = useState(() => adminService.getMedicos())
+  const [items, setItems] = useState<Agenda[]>([])
+  const [medicos, setMedicos] = useState<Medico[]>([])
   const [especialidades] = useState(() => adminService.getEspecialidades())
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
@@ -38,20 +42,46 @@ function AgendaModule() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Agenda | null>(null)
 
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [agendaData, medicosData] = await Promise.all([
+        adminService.getAgenda(),
+        adminService.getMedicos(),
+      ])
+      setItems(agendaData)
+      setMedicos(medicosData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar agendas médicas')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
     if (!term) return items
     return items.filter((item) => {
       const m = medicos.find((x) => x.id === item.doctorId)
-      return m?.firstName.toLowerCase().includes(term) || m?.lastName.toLowerCase().includes(term)
+      return (
+        m?.firstName.toLowerCase().includes(term) ||
+        m?.lastName.toLowerCase().includes(term) ||
+        item.date.includes(term) ||
+        item.status.toLowerCase().includes(term)
+      )
     })
   }, [items, medicos, search])
 
   const getMedico = (id: string) => {
     const m = medicos.find((x) => x.id === id)
-    return m ? `${m.firstName} ${m.lastName}` : '-'
+    return m ? `${m.firstName} ${m.lastName}` : `Médico #${id}`
   }
-  const getEsp = (id: string) => especialidades.find((x) => x.id === id)?.name ?? '-'
+  const getEsp = (id: string) => especialidades.find((x) => x.id === id)?.name ?? id
 
   const openCreate = () => {
     setMode('create')
@@ -63,36 +93,58 @@ function AgendaModule() {
   const openEdit = (item: Agenda) => {
     setMode('edit')
     setSelected(item)
-    setForm({ ...item })
+    setForm({
+      doctorId: item.doctorId,
+      specialtyId: item.specialtyId,
+      date: item.date,
+      time: item.time,
+      status: item.status,
+      duracionMinutos: item.duracionMinutos || 30,
+    })
     setModalOpen(true)
   }
 
   const openView = (item: Agenda) => {
     setMode('view')
     setSelected(item)
-    setForm({ ...item })
+    setForm({
+      doctorId: item.doctorId,
+      specialtyId: item.specialtyId,
+      date: item.date,
+      time: item.time,
+      status: item.status,
+      duracionMinutos: item.duracionMinutos || 30,
+    })
     setModalOpen(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (mode === 'view') {
       setModalOpen(false)
       return
     }
-    if (mode === 'create') {
-      const result = adminService.addAgenda(form)
-      if (!result) {
-        alert('Ya existe un espacio en agenda para este médico, fecha y hora.')
+    try {
+      if (mode === 'create') {
+        if (!form.doctorId) {
+          alert('Por favor selecciona un médico.')
+          return
+        }
+        if (!form.date) {
+          alert('Por favor selecciona la fecha de la agenda.')
+          return
+        }
+        await adminService.addAgenda(form)
+        await loadData()
+        setModalOpen(false)
         return
       }
-      setItems(adminService.getAgenda())
-      setModalOpen(false)
-      return
-    }
-    if (mode === 'edit' && selected) {
-      adminService.updateAgenda(selected.id, form)
-      setItems(adminService.getAgenda())
-      setModalOpen(false)
+      if (mode === 'edit' && selected) {
+        await adminService.updateAgenda(selected.id, form)
+        await loadData()
+        setModalOpen(false)
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al guardar la agenda en la base de datos')
     }
   }
 
@@ -101,29 +153,47 @@ function AgendaModule() {
     setDeleteOpen(true)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!toDelete) return
-    adminService.removeAgenda(toDelete.id)
-    setItems(adminService.getAgenda())
-    setDeleteOpen(false)
-    setToDelete(null)
+    try {
+      await adminService.removeAgenda(toDelete.id)
+      await loadData()
+      setDeleteOpen(false)
+      setToDelete(null)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar la agenda de la base de datos')
+    }
   }
 
   return (
     <div className="space-y-4">
       <AdminToolbar
-        title="Agenda"
+        title="Agenda Médica"
         searchValue={search}
         onSearchChange={setSearch}
         onCreate={openCreate}
         createLabel="Crear agenda"
       />
+      {loading && (
+        <div className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+          Cargando agendas médicas y cupos desde la base de datos...
+        </div>
+      )}
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <AdminDataTable
         columns={[
           { header: 'Médico', render: (row: Agenda) => getMedico(row.doctorId) },
           { header: 'Especialidad', render: (row: Agenda) => getEsp(row.specialtyId) },
           { header: 'Fecha', accessor: 'date' },
-          { header: 'Hora', accessor: 'time' },
+          { header: 'Hora inicio', accessor: 'time' },
+          {
+            header: 'Duración cita',
+            render: (row: Agenda) => `${row.duracionMinutos || 30} min`,
+          },
           { header: 'Estado', accessor: 'status' },
           {
             header: 'Acciones',
@@ -134,23 +204,23 @@ function AgendaModule() {
                   onClick={() => openView(row)}
                   className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
                 >
-                  <Eye className="h-3.5 w-3.5" />
+                  <Eye className="h-3 w-3" />
                   Ver
                 </button>
                 <button
                   type="button"
                   onClick={() => openEdit(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-sky-300 px-2 py-1 text-xs text-sky-700 hover:bg-sky-50"
                 >
-                  <Edit className="h-3.5 w-3.5" />
+                  <Edit className="h-3 w-3" />
                   Editar
                 </button>
                 <button
                   type="button"
                   onClick={() => confirmDelete(row)}
-                  className="inline-flex items-center gap-1 border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                  className="inline-flex items-center gap-1 border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                   Eliminar
                 </button>
               </div>
@@ -158,19 +228,25 @@ function AgendaModule() {
           },
         ]}
         data={filtered}
-        emptyMessage="No hay espacios de agenda registrados"
+        emptyMessage="No hay agendas médicas registradas."
       />
 
       <AdminModal
-        open={modalOpen}
-        title={mode === 'create' ? 'Crear agenda' : mode === 'edit' ? 'Editar agenda' : 'Ver agenda'}
+        isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
+        title={
+          mode === 'create'
+            ? 'Crear agenda médica'
+            : mode === 'edit'
+              ? 'Editar agenda médica'
+              : 'Detalle de la agenda'
+        }
         footer={
           <>
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="inline-flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700"
+              className="border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               {mode === 'view' ? 'Cerrar' : 'Cancelar'}
             </button>
@@ -180,7 +256,7 @@ function AgendaModule() {
                 onClick={handleSubmit}
                 className="inline-flex items-center gap-2 bg-sky-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-sky-900"
               >
-                Guardar
+                Guardar y generar cupos
               </button>
             ) : null}
           </>
@@ -193,16 +269,20 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.doctorId}
-            onChange={(event: any) => {
+            onChange={(event: ChangeEvent<HTMLSelectElement>) => {
               const doctorId = event.target.value
               const m = medicos.find((x) => x.id === doctorId)
-              setForm((prev) => ({ ...prev, doctorId, specialtyId: m?.specialtyId ?? prev.specialtyId }))
+              setForm((prev) => ({
+                ...prev,
+                doctorId,
+                specialtyId: m?.specialtyId ?? prev.specialtyId,
+              }))
             }}
           >
-            <option value="">Seleccionar</option>
+            <option value="">Seleccionar médico</option>
             {medicos.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.firstName} {m.lastName}
+                {m.firstName} {m.lastName} ({m.specialtyId})
               </option>
             ))}
           </AdminFormField>
@@ -212,9 +292,11 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.specialtyId}
-            onChange={(event: any) => setForm((prev) => ({ ...prev, specialtyId: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setForm((prev) => ({ ...prev, specialtyId: event.target.value }))
+            }
           >
-            <option value="">Seleccionar</option>
+            <option value="">Seleccionar especialidad</option>
             {especialidades.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.name}
@@ -228,16 +310,31 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.date}
-            onChange={(event: any) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setForm((prev) => ({ ...prev, date: event.target.value }))
+            }
           />
           <AdminFormField
-            label="Hora"
+            label="Hora de inicio"
             id="time"
             type="time"
             required
             disabled={mode === 'view'}
             value={form.time}
-            onChange={(event: any) => setForm((prev) => ({ ...prev, time: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setForm((prev) => ({ ...prev, time: event.target.value }))
+            }
+          />
+          <AdminFormField
+            label="Duración por cita (minutos)"
+            id="duracionMinutos"
+            type="number"
+            required
+            disabled={mode === 'view'}
+            value={String(form.duracionMinutos || 30)}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setForm((prev) => ({ ...prev, duracionMinutos: Number(event.target.value) || 30 }))
+            }
           />
           <AdminFormField
             label="Estado"
@@ -245,7 +342,9 @@ function AgendaModule() {
             required
             disabled={mode === 'view'}
             value={form.status}
-            onChange={(event: any) => setForm((prev) => ({ ...prev, status: event.target.value as AgendaEstado }))}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              setForm((prev) => ({ ...prev, status: event.target.value as AgendaEstado }))
+            }
           >
             {ESTADOS.map((estado) => (
               <option key={estado} value={estado}>
@@ -257,10 +356,11 @@ function AgendaModule() {
       </AdminModal>
 
       <ConfirmDeleteModal
-        open={deleteOpen}
-        onCancel={() => setDeleteOpen(false)}
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
-        description="¿Eliminar este espacio de agenda?"
+        title="Eliminar agenda médica"
+        message={`¿Estás seguro de que deseas eliminar este espacio de agenda para el médico ${toDelete ? getMedico(toDelete.doctorId) : ''}?`}
       />
     </div>
   )

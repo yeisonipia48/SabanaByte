@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../../administrador/components/AdminToolbar'
 import AdminDataTable from '../../administrador/components/AdminDataTable'
@@ -6,7 +6,7 @@ import AdminModal from '../../administrador/components/AdminModal'
 import AdminFormField from '../../administrador/components/AdminFormField'
 import ConfirmDeleteModal from '../../administrador/components/ConfirmDeleteModal'
 import { adminService } from '../../administrador/services/adminService'
-import type { Cita, CitaEstado } from '../../administrador/types/admin'
+import type { Cita, CitaEstado, Medico, Paciente } from '../../administrador/types/admin'
 
 const ESTADOS: CitaEstado[] = ['Programada', 'Atendida', 'Cancelada', 'No asistió']
 
@@ -29,10 +29,11 @@ const emptyForm: FormState = {
 }
 
 function PacienteCitasModule() {
-  const [items, setItems] = useState<Cita[]>(() => adminService.getCitas())
-  const [pacientes] = useState(() => adminService.getPacientes())
-  const [medicos] = useState(() => adminService.getMedicos())
+  const [items, setItems] = useState<Cita[]>([])
+  const [pacientes, setPacientes] = useState<Paciente[]>([])
+  const [medicos, setMedicos] = useState<Medico[]>([])
   const [especialidades] = useState(() => adminService.getEspecialidades())
+  const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
@@ -40,6 +41,28 @@ function PacienteCitasModule() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Cita | null>(null)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [citasData, pacData, medData] = await Promise.all([
+        adminService.getCitas(),
+        adminService.getPacientes(),
+        adminService.getMedicos(),
+      ])
+      setItems(citasData)
+      setPacientes(pacData)
+      setMedicos(medData)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -64,13 +87,13 @@ function PacienteCitasModule() {
 
   const getPaciente = (id: string) => {
     const p = pacientes.find((x) => x.id === id)
-    return p ? `${p.firstName} ${p.lastName}` : '-'
+    return p ? `${p.firstName} ${p.lastName}` : `Paciente #${id}`
   }
   const getMedico = (id: string) => {
     const m = medicos.find((x) => x.id === id)
-    return m ? `${m.firstName} ${m.lastName}` : '-'
+    return m ? `${m.firstName} ${m.lastName}` : `Médico #${id}`
   }
-  const getEsp = (id: string) => especialidades.find((x) => x.id === id)?.name ?? '-'
+  const getEsp = (id: string) => especialidades.find((x) => x.id === id)?.name ?? id
 
   const openCreate = () => {
     setMode('create')
@@ -93,21 +116,25 @@ function PacienteCitasModule() {
     setModalOpen(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (mode === 'view') {
       setModalOpen(false)
       return
     }
-    if (mode === 'create') {
-      adminService.addCita(form)
-      setItems(adminService.getCitas())
-      setModalOpen(false)
-      return
-    }
-    if (mode === 'edit' && selected) {
-      adminService.updateCita(selected.id, form)
-      setItems(adminService.getCitas())
-      setModalOpen(false)
+    try {
+      if (mode === 'create') {
+        await adminService.addCita(form)
+        await loadData()
+        setModalOpen(false)
+        return
+      }
+      if (mode === 'edit' && selected) {
+        await adminService.updateCita(selected.id, form)
+        await loadData()
+        setModalOpen(false)
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al guardar cita')
     }
   }
 
@@ -116,12 +143,16 @@ function PacienteCitasModule() {
     setDeleteOpen(true)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!toDelete) return
-    adminService.removeCita(toDelete.id)
-    setItems(adminService.getCitas())
-    setDeleteOpen(false)
-    setToDelete(null)
+    try {
+      await adminService.removeCita(toDelete.id)
+      await loadData()
+      setDeleteOpen(false)
+      setToDelete(null)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al cancelar cita')
+    }
   }
 
   return (

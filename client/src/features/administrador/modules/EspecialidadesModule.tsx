@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../components/AdminToolbar'
 import AdminDataTable from '../components/AdminDataTable'
@@ -63,14 +63,25 @@ function EspecialidadesModule() {
       return
     }
     if (mode === 'create') {
-      adminService.addEspecialidad(form)
-      setItems(adminService.getEspecialidades())
+      setItems((prev) => [
+        ...prev,
+        {
+          id: `especialidad-${Date.now()}`,
+          name: form.name.trim(),
+          description: form.description.trim(),
+        },
+      ])
       setModalOpen(false)
       return
     }
     if (mode === 'edit' && selected) {
-      adminService.updateEspecialidad(selected.id, form)
-      setItems(adminService.getEspecialidades())
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === selected.id
+            ? { ...item, name: form.name.trim(), description: form.description.trim() }
+            : item,
+        ),
+      )
       setModalOpen(false)
     }
   }
@@ -82,8 +93,7 @@ function EspecialidadesModule() {
 
   const handleDelete = () => {
     if (!toDelete) return
-    adminService.removeEspecialidad(toDelete.id)
-    setItems(adminService.getEspecialidades())
+    setItems((prev) => prev.filter((item) => item.id !== toDelete.id))
     setDeleteOpen(false)
     setToDelete(null)
   }
@@ -175,7 +185,9 @@ function EspecialidadesModule() {
             required
             disabled={mode === 'view'}
             value={form.name}
-            onChange={(event: any) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setForm((prev) => ({ ...prev, name: event.target.value }))
+            }
           />
           <AdminFormField
             label="Descripción"
@@ -183,7 +195,9 @@ function EspecialidadesModule() {
             required
             disabled={mode === 'view'}
             value={form.description}
-            onChange={(event: any) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              setForm((prev) => ({ ...prev, description: event.target.value }))
+            }
           />
         </div>
       </AdminModal>

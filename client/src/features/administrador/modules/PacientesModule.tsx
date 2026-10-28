@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../components/AdminToolbar'
 import AdminDataTable from '../components/AdminDataTable'
@@ -40,7 +40,9 @@ const emptyForm: FormState = {
 }
 
 function PacientesModule() {
-  const [items, setItems] = useState<Paciente[]>(() => adminService.getPacientes())
+  const [items, setItems] = useState<Paciente[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
@@ -48,6 +50,23 @@ function PacientesModule() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Paciente | null>(null)
+
+  const loadPacientes = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await adminService.getPacientes()
+      setItems(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar pacientes de la base de datos')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPacientes()
+  }, [loadPacientes])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -82,8 +101,8 @@ function PacientesModule() {
       birthDate: item.birthDate,
       phone: item.phone,
       address: item.address,
-      eps: item.eps,
-      bloodType: item.bloodType,
+      eps: item.eps || 'Compensar',
+      bloodType: item.bloodType || 'O+',
     })
     setModalOpen(true)
   }
@@ -95,37 +114,41 @@ function PacientesModule() {
       documentType: item.documentType,
       documentNumber: item.documentNumber,
       email: item.email,
-      password: item.password,
+      password: item.password || '',
       firstName: item.firstName,
       lastName: item.lastName,
       birthDate: item.birthDate,
       phone: item.phone,
       address: item.address,
-      eps: item.eps,
-      bloodType: item.bloodType,
+      eps: item.eps || 'Compensar',
+      bloodType: item.bloodType || 'O+',
     })
     setModalOpen(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (mode === 'view') {
       setModalOpen(false)
       return
     }
-    if (mode === 'create') {
-      adminService.addPaciente(form)
-      setItems(adminService.getPacientes())
-      setModalOpen(false)
-      return
-    }
-    if (mode === 'edit' && selected) {
-      const payload: Partial<Paciente> = { ...form }
-      if (!payload.password) {
-        delete payload.password
+    try {
+      if (mode === 'create') {
+        await adminService.addPaciente(form)
+        await loadPacientes()
+        setModalOpen(false)
+        return
       }
-      adminService.updatePaciente(selected.id, payload)
-      setItems(adminService.getPacientes())
-      setModalOpen(false)
+      if (mode === 'edit' && selected) {
+        const payload: Partial<Paciente> = { ...form }
+        if (!payload.password) {
+          delete payload.password
+        }
+        await adminService.updatePaciente(selected.id, payload)
+        await loadPacientes()
+        setModalOpen(false)
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al guardar el paciente en la base de datos')
     }
   }
 
@@ -134,12 +157,16 @@ function PacientesModule() {
     setDeleteOpen(true)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!toDelete) return
-    adminService.removePaciente(toDelete.id)
-    setItems(adminService.getPacientes())
-    setDeleteOpen(false)
-    setToDelete(null)
+    try {
+      await adminService.removePaciente(toDelete.id)
+      await loadPacientes()
+      setDeleteOpen(false)
+      setToDelete(null)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar el paciente de la base de datos')
+    }
   }
 
   return (
@@ -151,6 +178,16 @@ function PacientesModule() {
         onCreate={openCreate}
         createLabel="Crear paciente"
       />
+      {loading && (
+        <div className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+          Cargando pacientes desde la base de datos...
+        </div>
+      )}
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <AdminDataTable
         columns={[
           {

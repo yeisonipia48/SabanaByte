@@ -2,6 +2,7 @@ export type DocumentType = 'CC' | 'TI' | 'CE' | 'PA'
 
 export type AdminModuleKey =
   | 'inicio'
+  | 'usuarios'
   | 'pacientes'
   | 'medicos'
   | 'especialidades'
@@ -9,19 +10,30 @@ export type AdminModuleKey =
   | 'agenda'
   | 'lista-espera'
 
+export interface UsuarioAdmin {
+  id: string
+  rol: string
+  id_rol?: number
+  documentType: DocumentType
+  documentNumber: string
+  email: string
+  isActive: boolean
+  createdAt: string
+}
+
 export interface Paciente {
   id: string
   documentType: DocumentType
   documentNumber: string
   email: string
-  password: string
+  password?: string
   firstName: string
   lastName: string
   birthDate: string
   phone: string
   address: string
-  eps: string
-  bloodType: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
+  eps?: string
+  bloodType?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
 }
 
 export interface Especialidad {
@@ -35,10 +47,13 @@ export interface Medico {
   documentType: DocumentType
   documentNumber: string
   email: string
-  password: string
+  password?: string
   firstName: string
   lastName: string
   specialtyId: string
+  phone?: string
+  tarjetaProfesional?: string
+  consultorio?: string
 }
 
 export type CitaEstado = 'Programada' | 'Atendida' | 'Cancelada' | 'No asistió'
@@ -53,6 +68,8 @@ export interface Cita {
   date: string
   time: string
   status: CitaEstado
+  idCupo?: string
+  motivoConsulta?: string
 }
 
 export interface Agenda {
@@ -62,6 +79,7 @@ export interface Agenda {
   date: string
   time: string
   status: AgendaEstado
+  duracionMinutos?: number
 }
 
 export interface ListaEspera {

@@ -6,11 +6,13 @@ import {
   Home,
   ListOrdered,
   Stethoscope,
+  UserCog,
   Users,
 } from 'lucide-react'
 import type { AuthUser } from '../auth/types'
 import AdminLayout from '../../layouts/AdminLayout'
 import type { AdminModuleKey } from './types/admin'
+import UsuariosModule from './modules/UsuariosModule'
 import PacientesModule from './modules/PacientesModule'
 import MedicosModule from './modules/MedicosModule'
 import EspecialidadesModule from './modules/EspecialidadesModule'
@@ -25,6 +27,7 @@ interface DashboardAdministradorProps {
 
 const navItems = [
   { key: 'inicio' as const, label: 'Inicio', icon: <Home className="h-4 w-4" /> },
+  { key: 'usuarios' as const, label: 'Usuarios', icon: <UserCog className="h-4 w-4" /> },
   { key: 'pacientes' as const, label: 'Pacientes', icon: <Users className="h-4 w-4" /> },
   { key: 'medicos' as const, label: 'Médicos', icon: <Stethoscope className="h-4 w-4" /> },
   { key: 'especialidades' as const, label: 'Especialidades', icon: <BookOpenText className="h-4 w-4" /> },
@@ -38,6 +41,8 @@ function DashboardAdministrador({ user, onLogout }: DashboardAdministradorProps)
 
   const renderModule = () => {
     switch (activeModule) {
+      case 'usuarios':
+        return <UsuariosModule />
       case 'pacientes':
         return <PacientesModule />
       case 'medicos':
