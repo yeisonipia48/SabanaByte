@@ -1,17 +1,15 @@
 import type { AuthUser, LoginPayload, LoginResult, RegisterPayload, RegisterResult } from './types'
-import { findMockUser, MOCK_USERS, type MockUser } from './mockUsers'
+import { API_CONFIG } from '../../config/api'
+import { httpClient, HttpError } from '../../lib/httpClient'
+import type { LoginApiRequest, MedicoApi, PacienteApi, RegistroUsuarioApiRequest, RolApi, UsuarioApi } from '../../types/api/auth'
+import { mapRoleToFrontend } from '../../types/api/auth'
 
-const SIMULATED_DELAY_MS = 900
 const SESSION_KEY = 'sabanaByte.session'
 
 export interface SessionData {
   user: AuthUser
   token: string
   expiresAt: number
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function createToken(role: string): string {
@@ -27,24 +25,9 @@ function createUsernameFromFullName(fullName: string): string {
     .replace(/[^a-z0-9]+/g, '.')
     .replace(/^\.+|\.+$/g, '')
 
-  if (!normalized) return `paciente${Date.now().toString().slice(-6)}`
+  if (!normalized) return `usuario${Date.now().toString().slice(-6)}`
 
   return normalized.length > 20 ? normalized.slice(0, 20) : normalized
-}
-
-function generatePatientId(): string {
-  const existingPatientIds = MOCK_USERS.filter((user) => user.role === 'Paciente').map(
-    (user) => user.id,
-  )
-  let counter = existingPatientIds.length + 1
-  let candidate = `pac-${String(counter).padStart(3, '0')}`
-
-  while (MOCK_USERS.some((user) => user.id === candidate)) {
-    counter += 1
-    candidate = `pac-${String(counter).padStart(3, '0')}`
-  }
-
-  return candidate
 }
 
 export function saveSession(user: AuthUser, token: string, remember = false): SessionData {
@@ -94,15 +77,9 @@ export function isAuthenticated(): boolean {
 }
 
 /**
- * Autenticación simulada.
- * Valida contra usuarios mock por número de documento y contraseña.
- * El rol se infiere desde el registro del usuario.
- * Punto de integración: reemplazar por petición HTTP real manteniendo la firma.
+ * Autenticación contra API.
  */
 export async function login(payload: LoginPayload): Promise<LoginResult> {
-  await wait(SIMULATED_DELAY_MS)
-
-  const username = payload.username?.trim()
   const documentNumber = payload.documentNumber?.trim()
   const password = payload.password
 
@@ -113,42 +90,94 @@ export async function login(payload: LoginPayload): Promise<LoginResult> {
     }
   }
 
-  const user = findMockUser({
-    username,
-    documentNumber,
-    password,
-  })
+  try {
+    const loginRequest: LoginApiRequest = {
+      numero_documento: documentNumber,
+      password,
+    }
 
-  if (!user) {
+    const loginOk = await httpClient.post<boolean>(API_CONFIG.ENDPOINTS.AUTH.LOGIN, loginRequest)
+
+    if (!loginOk) {
+      return {
+        ok: false,
+        message: 'Número de documento o contraseña incorrectos. Verifica tus credenciales.',
+      }
+    }
+
+    // Get user information
+    const usuarios = await httpClient.get<UsuarioApi[]>(API_CONFIG.ENDPOINTS.USUARIOS.BASE)
+    const usuario = usuarios.find((u) => u.numero_documento === documentNumber)
+
+    if (!usuario) {
+      return {
+        ok: false,
+        message: 'No se encontró información del usuario. Intenta nuevamente.',
+      }
+    }
+
+    // Try to get patient or doctor details for full name
+    let fullName = ''
+    try {
+      const pacientes = await httpClient.get<PacienteApi[]>(API_CONFIG.ENDPOINTS.PACIENTES.BASE)
+      const paciente = pacientes.find((p) => p.id_usuario === usuario.id || p.numero_documento === usuario.numero_documento)
+      if (paciente) {
+        fullName = `${paciente.nombres} ${paciente.apellidos}`.trim()
+      }
+    } catch {
+      // ignore
+    }
+
+    if (!fullName) {
+      try {
+        const medicos = await httpClient.get<MedicoApi[]>(API_CONFIG.ENDPOINTS.MEDICOS.BASE)
+        const medico = medicos.find((m) => m.id_usuario === usuario.id || m.numero_documento === usuario.numero_documento)
+        if (medico) {
+          fullName = `${medico.nombres} ${medico.apellidos}`.trim()
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!fullName) {
+      fullName = payload.username?.trim() || usuario.email || usuario.numero_documento
+    }
+
+    const role = mapRoleToFrontend(usuario.rol)
+    const authUser: AuthUser = {
+      id: String(usuario.id),
+      fullName,
+      documentType: usuario.tipo_documento,
+      documentNumber: usuario.numero_documento,
+      email: usuario.email,
+      role,
+      username: payload.username?.trim() || createUsernameFromFullName(fullName),
+    }
+
+    const token = createToken(role)
+
+    return {
+      ok: true,
+      message: `Bienvenido(a) ${authUser.fullName}. Acceso correcto.`,
+      user: authUser,
+      token,
+    }
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return {
+        ok: false,
+        message: error.message || 'Número de documento o contraseña incorrectos. Verifica tus credenciales.',
+      }
+    }
     return {
       ok: false,
-      message: 'Número de documento o contraseña incorrectos. Verifica tus credenciales.',
+      message: 'Error al iniciar sesión. Intenta nuevamente.',
     }
-  }
-
-  const authUser: AuthUser = {
-    id: user.id,
-    fullName: user.fullName,
-    documentType: user.documentType,
-    documentNumber: user.documentNumber,
-    email: user.email,
-    role: user.role,
-    username: user.username,
-  }
-
-  const token = createToken(user.role)
-
-  return {
-    ok: true,
-    message: `Bienvenido(a) ${user.fullName}. Acceso correcto.`,
-    user: authUser,
-    token,
   }
 }
 
 export async function register(payload: RegisterPayload): Promise<RegisterResult> {
-  await wait(SIMULATED_DELAY_MS)
-
   const documentType = payload.documentType?.trim()
   const documentNumber = payload.documentNumber?.trim()
   const fullName = payload.fullName?.trim()
@@ -185,56 +214,76 @@ export async function register(payload: RegisterPayload): Promise<RegisterResult
     }
   }
 
-  const documentExists = MOCK_USERS.some(
-    (user) => user.documentType === documentType && user.documentNumber === documentNumber,
-  )
+  try {
+    // Get roles to find Paciente role id
+    const roles = await httpClient.get<RolApi[]>(API_CONFIG.ENDPOINTS.ROLES.BASE)
+    const pacienteRole = roles.find((r) => r.rol.trim().toLowerCase() === 'paciente')
+    const idRol = pacienteRole?.id ?? 1
 
-  if (documentExists) {
+    const nameParts = fullName.split(/\s+/)
+    const nombres = nameParts.slice(0, Math.ceil(nameParts.length / 2)).join(' ') || fullName
+    const apellidos = nameParts.slice(Math.ceil(nameParts.length / 2)).join(' ') || ''
+
+    const registerRequest: RegistroUsuarioApiRequest = {
+      id_rol: idRol,
+      tipo_documento: documentType,
+      numero_documento: documentNumber,
+      email,
+      password,
+      nombres,
+      apellidos,
+      fecha_nacimiento: null,
+      telefono: null,
+      direccion: null,
+    }
+
+    await httpClient.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, registerRequest)
+
+    // Auto-login after registration
+    const loginResult = await login({
+      documentNumber,
+      password,
+      remember: payload.remember,
+    })
+
+    if (loginResult.ok && loginResult.user) {
+      return {
+        ok: true,
+        message: `Registro exitoso. Bienvenido(a) ${loginResult.user.fullName}. Tu cuenta ha sido creada como Paciente.`,
+        user: loginResult.user,
+        token: loginResult.token,
+      }
+    }
+
+    // Fallback if auto-login fails
+    const authUser: AuthUser = {
+      id: documentNumber,
+      fullName,
+      documentType,
+      documentNumber,
+      email,
+      role: 'Paciente',
+      username: createUsernameFromFullName(fullName),
+    }
+
+    const token = createToken('Paciente')
+
+    return {
+      ok: true,
+      message: `Registro exitoso. Bienvenido(a) ${fullName}. Tu cuenta ha sido creada como Paciente.`,
+      user: authUser,
+      token,
+    }
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return {
+        ok: false,
+        message: error.message || 'No se pudo completar el registro. Intenta nuevamente.',
+      }
+    }
     return {
       ok: false,
-      message: 'Ya existe una cuenta registrada con este tipo y número de documento.',
+      message: 'No se pudo completar el registro. Intenta nuevamente.',
     }
-  }
-
-  const emailExists = MOCK_USERS.some((user) => user.email.toLowerCase() === email.toLowerCase())
-  if (emailExists) {
-    return {
-      ok: false,
-      message: 'Ya existe una cuenta registrada con este correo electrónico.',
-    }
-  }
-
-  const username = createUsernameFromFullName(fullName)
-  const newUser: MockUser = {
-    id: generatePatientId(),
-    username,
-    password,
-    documentType: documentType as MockUser['documentType'],
-    documentNumber,
-    fullName,
-    email,
-    role: 'Paciente',
-    active: true,
-  }
-
-  MOCK_USERS.push(newUser)
-
-  const authUser: AuthUser = {
-    id: newUser.id,
-    fullName: newUser.fullName,
-    documentType: newUser.documentType,
-    documentNumber: newUser.documentNumber,
-    email: newUser.email,
-    role: newUser.role,
-    username: newUser.username,
-  }
-
-  const token = createToken(newUser.role)
-
-  return {
-    ok: true,
-    message: `Registro exitoso. Bienvenido(a) ${newUser.fullName}. Tu cuenta ha sido creada como Paciente.`,
-    user: authUser,
-    token,
   }
 }
