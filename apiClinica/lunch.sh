@@ -10,8 +10,9 @@ if [ -f .env ]; then
 fi
 
 echo "Construyendo la imagen de la API..."
-docker build --no-cache -t api-clinica:v1 .
-
+docker build --no-cache -t api-clinica:v1 . >>/dev/null 2>&1
+docker build --no-cache -t frontendcitas:v1 TestPhp/. >>/dev/null 2>&1
+sleep 2
 echo "Desplegando la API en Docker Swarm..."
 sleep 2
 
@@ -21,14 +22,20 @@ docker secret inspect postgres_password >/dev/null 2>&1 || echo "$postgres_passw
 docker secret inspect postgres_host >/dev/null 2>&1 || echo "$postgres_host" | docker secret create postgres_host -
 docker secret inspect postgres_db >/dev/null 2>&1 || echo "$postgres_db" | docker secret create postgres_db -
 
-# Desplegar usando el nombre correcto del stack (apiclinica_stack)
-docker stack deploy -c stack.yaml apiclinica_stack
+echo "Actualizando servicios con las nuevas imágenes..."
+docker service update --force --image api-clinica:v1 api-clinica_api
+docker service update --force --image frontendcitas:v1 api-clinica_frontend
 
-echo "Esperando a que el contenedor de la base de datos esté listo..."
-sleep 5
+contenedor_frontend=$(docker ps -q -f name=api-clinica_frontend | head -n1)
+if [ -n "$contenedor_frontend" ]; then
+    docker cp TestPhp/. "$contenedor_frontend":/var/www/html/
+fi
 
-# Buscar el contenedor de postgres
-contenedor=$(docker ps -q --filter "name=apiclinica_stack_data")
+contenedor=$(docker ps -q -f name=api-clinica_data | head -n1)
+if [ -n "$contenedor" ]; then
+    docker exec "$contenedor" psql -U "$postgres_user" -d "$postgres_db" -c 'SELECT 1;' >>/dev/null 2>&1 \
+        || docker exec "$contenedor" psql -U "$postgres_user" -c "CREATE DATABASE $postgres_db;"
+fi
 
 if [ -n "$contenedor" ]; then
   echo "Verificando o creando la base de datos..."

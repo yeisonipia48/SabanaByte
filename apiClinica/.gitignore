@@ -1,4 +1,5 @@
 .app
 .mypy_cache
 __pycache__
-/.env
+/home/yeison/Documents/citasClinicas/.vscode
+TestPhp
