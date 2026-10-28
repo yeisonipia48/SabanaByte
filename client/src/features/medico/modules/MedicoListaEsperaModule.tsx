@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../../administrador/components/AdminToolbar'
 import AdminDataTable from '../../administrador/components/AdminDataTable'
@@ -6,7 +6,7 @@ import AdminModal from '../../administrador/components/AdminModal'
 import AdminFormField from '../../administrador/components/AdminFormField'
 import ConfirmDeleteModal from '../../administrador/components/ConfirmDeleteModal'
 import { adminService } from '../../administrador/services/adminService'
-import type { ListaEspera, ListaEsperaEstado } from '../../administrador/types/admin'
+import type { Especialidad, ListaEspera, ListaEsperaEstado, Medico, Paciente } from '../../administrador/types/admin'
 
 const ESTADOS: ListaEsperaEstado[] = ['En espera', 'Atendido', 'Cancelado']
 
@@ -29,10 +29,10 @@ const emptyForm: FormState = {
 }
 
 function MedicoListaEsperaModule() {
-  const [items, setItems] = useState<ListaEspera[]>(() => adminService.getListaEspera())
-  const [pacientes] = useState(() => adminService.getPacientes())
-  const [medicos] = useState(() => adminService.getMedicos())
-  const [especialidades] = useState(() => adminService.getEspecialidades())
+  const [items, setItems] = useState<ListaEspera[]>([])
+  const [pacientes, setPacientes] = useState<Paciente[]>([])
+  const [medicos, setMedicos] = useState<Medico[]>([])
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
@@ -40,6 +40,26 @@ function MedicoListaEsperaModule() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<ListaEspera | null>(null)
+
+  const loadData = useCallback(async () => {
+    const [esperaData, pacData, medData] = await Promise.all([
+      adminService.getListaEspera(),
+      adminService.getPacientes(),
+      adminService.getMedicos(),
+    ])
+    setItems(esperaData)
+    setPacientes(pacData)
+    setMedicos(medData)
+    setEspecialidades(adminService.getEspecialidades())
+  }, [])
+
+  useEffect(() => {
+    loadData().catch(() => {
+      setItems([])
+      setPacientes([])
+      setMedicos([])
+    })
+  }, [loadData])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -93,21 +113,25 @@ function MedicoListaEsperaModule() {
     setModalOpen(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (mode === 'view') {
       setModalOpen(false)
       return
     }
-    if (mode === 'create') {
-      adminService.addListaEspera(form)
-      setItems(adminService.getListaEspera())
-      setModalOpen(false)
-      return
-    }
-    if (mode === 'edit' && selected) {
-      adminService.updateListaEspera(selected.id, form)
-      setItems(adminService.getListaEspera())
-      setModalOpen(false)
+    try {
+      if (mode === 'create') {
+        await adminService.addListaEspera(form)
+        await loadData()
+        setModalOpen(false)
+        return
+      }
+      if (mode === 'edit' && selected) {
+        await adminService.updateListaEspera(selected.id, form)
+        await loadData()
+        setModalOpen(false)
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo guardar la solicitud.')
     }
   }
 
@@ -116,12 +140,16 @@ function MedicoListaEsperaModule() {
     setDeleteOpen(true)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!toDelete) return
-    adminService.removeListaEspera(toDelete.id)
-    setItems(adminService.getListaEspera())
-    setDeleteOpen(false)
-    setToDelete(null)
+    try {
+      await adminService.removeListaEspera(toDelete.id)
+      await loadData()
+      setDeleteOpen(false)
+      setToDelete(null)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo cancelar la solicitud.')
+    }
   }
 
   return (

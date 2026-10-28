@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../../administrador/components/AdminToolbar'
 import AdminDataTable from '../../administrador/components/AdminDataTable'
@@ -40,7 +40,7 @@ const emptyForm: FormState = {
 }
 
 function MedicoPacientesModule() {
-  const [items, setItems] = useState<Paciente[]>(() => adminService.getPacientes())
+  const [items, setItems] = useState<Paciente[]>([])
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
@@ -48,6 +48,15 @@ function MedicoPacientesModule() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Paciente | null>(null)
+
+  const loadData = useCallback(async () => {
+    const data = await adminService.getPacientes()
+    setItems(data)
+  }, [])
+
+  useEffect(() => {
+    loadData().catch(() => setItems([]))
+  }, [loadData])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -82,7 +91,7 @@ function MedicoPacientesModule() {
       birthDate: item.birthDate,
       phone: item.phone,
       address: item.address,
-      eps: item.eps,
+      eps: item.eps ?? '',
       bloodType: item.bloodType,
     })
     setModalOpen(true)
@@ -95,37 +104,41 @@ function MedicoPacientesModule() {
       documentType: item.documentType,
       documentNumber: item.documentNumber,
       email: item.email,
-      password: item.password,
+      password: item.password ?? '',
       firstName: item.firstName,
       lastName: item.lastName,
       birthDate: item.birthDate,
       phone: item.phone,
       address: item.address,
-      eps: item.eps,
+      eps: item.eps ?? '',
       bloodType: item.bloodType,
     })
     setModalOpen(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (mode === 'view') {
       setModalOpen(false)
       return
     }
-    if (mode === 'create') {
-      adminService.addPaciente(form)
-      setItems(adminService.getPacientes())
-      setModalOpen(false)
-      return
-    }
-    if (mode === 'edit' && selected) {
-      const payload: Partial<Paciente> = { ...form }
-      if (!payload.password) {
-        delete payload.password
+    try {
+      if (mode === 'create') {
+        await adminService.addPaciente(form)
+        await loadData()
+        setModalOpen(false)
+        return
       }
-      adminService.updatePaciente(selected.id, payload)
-      setItems(adminService.getPacientes())
-      setModalOpen(false)
+      if (mode === 'edit' && selected) {
+        const payload: Partial<Paciente> = { ...form }
+        if (!payload.password) {
+          delete payload.password
+        }
+        await adminService.updatePaciente(selected.id, payload)
+        await loadData()
+        setModalOpen(false)
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo guardar el paciente.')
     }
   }
 
@@ -134,12 +147,16 @@ function MedicoPacientesModule() {
     setDeleteOpen(true)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!toDelete) return
-    adminService.removePaciente(toDelete.id)
-    setItems(adminService.getPacientes())
-    setDeleteOpen(false)
-    setToDelete(null)
+    try {
+      await adminService.removePaciente(toDelete.id)
+      await loadData()
+      setDeleteOpen(false)
+      setToDelete(null)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo eliminar el paciente.')
+    }
   }
 
   return (

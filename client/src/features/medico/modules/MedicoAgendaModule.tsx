@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../../administrador/components/AdminToolbar'
 import AdminDataTable from '../../administrador/components/AdminDataTable'
@@ -6,7 +6,7 @@ import AdminModal from '../../administrador/components/AdminModal'
 import AdminFormField from '../../administrador/components/AdminFormField'
 import ConfirmDeleteModal from '../../administrador/components/ConfirmDeleteModal'
 import { adminService } from '../../administrador/services/adminService'
-import type { Agenda, AgendaEstado } from '../../administrador/types/admin'
+import type { Agenda, AgendaEstado, Especialidad, Medico } from '../../administrador/types/admin'
 
 const ESTADOS: AgendaEstado[] = ['Disponible', 'Ocupado', 'Bloqueado']
 
@@ -27,9 +27,9 @@ const emptyForm: FormState = {
 }
 
 function MedicoAgendaModule() {
-  const [items, setItems] = useState<Agenda[]>(() => adminService.getAgenda())
-  const [medicos] = useState(() => adminService.getMedicos())
-  const [especialidades] = useState(() => adminService.getEspecialidades())
+  const [items, setItems] = useState<Agenda[]>([])
+  const [medicos, setMedicos] = useState<Medico[]>([])
+  const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
@@ -37,6 +37,23 @@ function MedicoAgendaModule() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Agenda | null>(null)
+
+  const loadData = useCallback(async () => {
+    const [agendaData, medData] = await Promise.all([
+      adminService.getAgenda(),
+      adminService.getMedicos(),
+    ])
+    setItems(agendaData)
+    setMedicos(medData)
+    setEspecialidades(adminService.getEspecialidades())
+  }, [])
+
+  useEffect(() => {
+    loadData().catch(() => {
+      setItems([])
+      setMedicos([])
+    })
+  }, [loadData])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -83,25 +100,25 @@ function MedicoAgendaModule() {
     setModalOpen(true)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (mode === 'view') {
       setModalOpen(false)
       return
     }
-    if (mode === 'create') {
-      const result = adminService.addAgenda(form)
-      if (!result) {
-        alert('Ya existe un espacio en agenda para este médico, fecha y hora.')
+    try {
+      if (mode === 'create') {
+        await adminService.addAgenda(form)
+        await loadData()
+        setModalOpen(false)
         return
       }
-      setItems(adminService.getAgenda())
-      setModalOpen(false)
-      return
-    }
-    if (mode === 'edit' && selected) {
-      adminService.updateAgenda(selected.id, form)
-      setItems(adminService.getAgenda())
-      setModalOpen(false)
+      if (mode === 'edit' && selected) {
+        await adminService.updateAgenda(selected.id, form)
+        await loadData()
+        setModalOpen(false)
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo guardar el espacio de agenda.')
     }
   }
 
@@ -110,12 +127,16 @@ function MedicoAgendaModule() {
     setDeleteOpen(true)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!toDelete) return
-    adminService.removeAgenda(toDelete.id)
-    setItems(adminService.getAgenda())
-    setDeleteOpen(false)
-    setToDelete(null)
+    try {
+      await adminService.removeAgenda(toDelete.id)
+      await loadData()
+      setDeleteOpen(false)
+      setToDelete(null)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo eliminar el espacio de agenda.')
+    }
   }
 
   return (

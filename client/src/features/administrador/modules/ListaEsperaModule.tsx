@@ -9,8 +9,6 @@ import { adminService } from '../services/adminService'
 import { listaEsperaService } from '../../../services'
 import type { ListaEspera, ListaEsperaEstado, Medico, Paciente } from '../types/admin'
 
-const ESTADOS: ListaEsperaEstado[] = ['En espera', 'Atendido', 'Cancelado']
-
 interface FormState {
   patientId: string
   doctorId: string
@@ -262,7 +260,7 @@ function ListaEsperaModule() {
       />
 
       <AdminModal
-        isOpen={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={mode === 'create' ? 'Nueva solicitud en lista de espera' : 'Detalle de la solicitud'}
         footer={
@@ -346,11 +344,11 @@ function ListaEsperaModule() {
       </AdminModal>
 
       <ConfirmDeleteModal
-        isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
+        open={deleteOpen}
+        onCancel={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
         title="Cancelar solicitud de espera"
-        message={`¿Estás seguro de que deseas cancelar la solicitud de espera del paciente ${toDelete ? getPaciente(toDelete.patientId) : ''}?`}
+        description={`¿Estás seguro de que deseas cancelar la solicitud de espera del paciente ${toDelete ? getPaciente(toDelete.patientId) : ''}?`}
       />
     </div>
   )

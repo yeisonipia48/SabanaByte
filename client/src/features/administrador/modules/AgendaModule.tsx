@@ -232,7 +232,7 @@ function AgendaModule() {
       />
 
       <AdminModal
-        isOpen={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={
           mode === 'create'
@@ -356,11 +356,11 @@ function AgendaModule() {
       </AdminModal>
 
       <ConfirmDeleteModal
-        isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
+        open={deleteOpen}
+        onCancel={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
         title="Eliminar agenda médica"
-        message={`¿Estás seguro de que deseas eliminar este espacio de agenda para el médico ${toDelete ? getMedico(toDelete.doctorId) : ''}?`}
+        description={`¿Estás seguro de que deseas eliminar este espacio de agenda para el médico ${toDelete ? getMedico(toDelete.doctorId) : ''}?`}
       />
     </div>
   )

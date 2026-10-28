@@ -1,6 +1,7 @@
 import type {
   Agenda,
   Cita,
+  DocumentType,
   Especialidad,
   ListaEspera,
   Medico,
@@ -19,6 +20,7 @@ import {
 import { httpClient } from '../../../lib/httpClient'
 import { API_CONFIG } from '../../../config/api'
 import type { RegistroUsuarioApiRequest } from '../../../types/api/auth'
+import type { CupoDisponibleResponseApi, CuposDisponiblesQuery } from '../../../types/api/cupos'
 
 const DEFAULT_ESPECIALIDADES: Especialidad[] = [
   { id: 'Medicina General', name: 'Medicina General', description: 'Atención primaria y diagnóstico integral' },
@@ -200,62 +202,19 @@ export const adminService = {
     }))
   },
 
+  async getCuposDisponibles(params?: CuposDisponiblesQuery): Promise<CupoDisponibleResponseApi[]> {
+    return cuposService.getDisponibles(params)
+  },
+
   async addCita(data: Omit<Cita, 'id'>): Promise<Cita> {
-    let cupoId: number | null = null
-
-    if (data.idCupo) {
-      cupoId = Number(data.idCupo)
-    } else {
-      // Buscar si ya existe un cupo disponible para el médico en esa fecha
-      const disponibles = await cuposService.getDisponibles({
-        id_medico: Number(data.doctorId),
-        fecha_inicio: data.date,
-        fecha_fin: data.date,
-      })
-
-      const match = disponibles.find(
-        (c) => c.fecha_cupo === data.date && (data.time ? c.hora_cupo.startsWith(data.time) : true),
-      )
-
-      if (match) {
-        cupoId = match.id_cupo
-      } else {
-        // Si no existe, crear la agenda médica y generar los cupos correspondientes
-        const horaInicio = data.time ? data.time.slice(0, 5) : '08:00'
-        const [h, m] = horaInicio.split(':').map(Number)
-        const horaFin = `${String(Math.min(23, (h || 8) + 1)).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`
-
-        const nuevaAgenda = await agendaService.create({
-          id_medico: Number(data.doctorId),
-          fecha_inicio: data.date,
-          fecha_fin: data.date,
-          hora_inicio: horaInicio,
-          hora_fin: horaFin,
-          duracion_cita: 30,
-        })
-
-        await agendaService.generarCupos(nuevaAgenda.id)
-
-        const recienGenerados = await cuposService.getDisponibles({
-          id_medico: Number(data.doctorId),
-          fecha_inicio: data.date,
-          fecha_fin: data.date,
-        })
-
-        if (recienGenerados.length > 0) {
-          cupoId = recienGenerados[0].id_cupo
-        }
-      }
-    }
-
-    if (!cupoId) {
-      throw new Error('No se pudo encontrar ni generar un cupo disponible para esta cita.')
+    if (!data.idCupo) {
+      throw new Error('Debes seleccionar un cupo disponible para agendar la cita.')
     }
 
     const created = await citasService.create({
-      id_cupo: cupoId,
+      id_cupo: Number(data.idCupo),
       id_paciente: Number(data.patientId),
-      motivo_consulta: data.motivoConsulta || 'Consulta médica programada',
+      motivo_consulta: data.motivoConsulta?.trim() || null,
     })
 
     return {
@@ -419,7 +378,7 @@ export const adminService = {
     return apiData.map((u) => ({
       id: String(u.id),
       rol: u.rol,
-      documentType: (u.tipo_documento as any) || 'CC',
+      documentType: (u.tipo_documento as DocumentType) || 'CC',
       documentNumber: u.numero_documento,
       email: u.email,
       isActive: u.is_active,

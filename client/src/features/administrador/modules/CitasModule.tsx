@@ -7,6 +7,7 @@ import AdminFormField from '../components/AdminFormField'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { adminService } from '../services/adminService'
 import type { Cita, CitaEstado, Medico, Paciente } from '../types/admin'
+import type { CupoDisponibleResponseApi } from '../../../types/api/cupos'
 
 const ESTADOS: CitaEstado[] = ['Programada', 'Atendida', 'Cancelada', 'No asistió']
 
@@ -15,6 +16,7 @@ interface FormState {
   doctorId: string
   specialtyId: string
   date: string
+  cupoId: string
   time: string
   status: CitaEstado
   motivoConsulta: string
@@ -25,6 +27,7 @@ const emptyForm: FormState = {
   doctorId: '',
   specialtyId: '',
   date: '',
+  cupoId: '',
   time: '',
   status: 'Programada',
   motivoConsulta: '',
@@ -44,6 +47,8 @@ function CitasModule() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Cita | null>(null)
+  const [cupos, setCupos] = useState<CupoDisponibleResponseApi[]>([])
+  const [loadingCupos, setLoadingCupos] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -67,6 +72,28 @@ function CitasModule() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const loadCupos = useCallback(async () => {
+    setLoadingCupos(true)
+    try {
+      const data = await adminService.getCuposDisponibles({
+        id_medico: form.doctorId ? Number(form.doctorId) : undefined,
+        especialidad: form.specialtyId || undefined,
+        fecha_inicio: form.date || undefined,
+        fecha_fin: form.date || undefined,
+      })
+      setCupos(data)
+    } catch {
+      setCupos([])
+    } finally {
+      setLoadingCupos(false)
+    }
+  }, [form.doctorId, form.specialtyId, form.date])
+
+  useEffect(() => {
+    if (!modalOpen || mode !== 'create') return
+    loadCupos()
+  }, [modalOpen, mode, loadCupos])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -110,6 +137,7 @@ function CitasModule() {
       doctorId: item.doctorId,
       specialtyId: item.specialtyId,
       date: item.date,
+      cupoId: item.idCupo ?? '',
       time: item.time,
       status: item.status,
       motivoConsulta: item.motivoConsulta || '',
@@ -125,6 +153,7 @@ function CitasModule() {
       doctorId: item.doctorId,
       specialtyId: item.specialtyId,
       date: item.date,
+      cupoId: item.idCupo ?? '',
       time: item.time,
       status: item.status,
       motivoConsulta: item.motivoConsulta || '',
@@ -147,11 +176,16 @@ function CitasModule() {
           alert('Por favor selecciona un médico.')
           return
         }
-        if (!form.date) {
-          alert('Por favor selecciona la fecha de la cita.')
+        if (!form.cupoId) {
+          alert('Por favor selecciona un cupo disponible para la cita.')
           return
         }
-        await adminService.addCita(form)
+        const cupo = cupos.find((c) => String(c.id_cupo) === form.cupoId)
+        await adminService.addCita({
+          ...form,
+          date: cupo?.fecha_cupo ?? form.date,
+          time: cupo?.hora_cupo ?? form.time,
+        })
         await loadData()
         setModalOpen(false)
         return
@@ -346,17 +380,50 @@ function CitasModule() {
               setForm((prev) => ({ ...prev, date: event.target.value }))
             }
           />
-          <AdminFormField
-            label="Hora de la cita"
-            id="time"
-            type="time"
-            required
-            disabled={mode === 'view'}
-            value={form.time}
-            onChange={(event: ChangeEvent<HTMLInputElement>) =>
-              setForm((prev) => ({ ...prev, time: event.target.value }))
-            }
-          />
+          {mode === 'create' ? (
+            <div className="sm:col-span-2">
+              <AdminFormField
+                label={loadingCupos ? 'Cupos disponibles (cargando...)' : 'Cupo disponible'}
+                id="cupoId"
+                required
+                disabled={loadingCupos || cupos.length === 0}
+                value={form.cupoId}
+                onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                  const cupoId = event.target.value
+                  const cupo = cupos.find((c) => String(c.id_cupo) === cupoId)
+                  setForm((prev) => ({
+                    ...prev,
+                    cupoId,
+                    date: cupo?.fecha_cupo ?? prev.date,
+                    time: cupo?.hora_cupo ?? prev.time,
+                  }))
+                }}
+              >
+                <option value="">
+                  {cupos.length === 0
+                    ? 'No hay cupos disponibles con los filtros seleccionados'
+                    : 'Seleccionar cupo'}
+                </option>
+                {cupos.map((c) => (
+                  <option key={c.id_cupo} value={String(c.id_cupo)}>
+                    {c.fecha_cupo} {c.hora_cupo} — {c.medico} ({c.especialidad})
+                  </option>
+                ))}
+              </AdminFormField>
+            </div>
+          ) : (
+            <AdminFormField
+              label="Hora de la cita"
+              id="time"
+              type="time"
+              required
+              disabled
+              value={form.time}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setForm((prev) => ({ ...prev, time: event.target.value }))
+              }
+            />
+          )}
           <AdminFormField
             label="Estado"
             id="status"

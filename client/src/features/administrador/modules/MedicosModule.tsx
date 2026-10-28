@@ -239,7 +239,7 @@ function MedicosModule() {
       />
 
       <AdminModal
-        isOpen={modalOpen}
+        open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={
           mode === 'create'
@@ -371,11 +371,11 @@ function MedicosModule() {
       </AdminModal>
 
       <ConfirmDeleteModal
-        isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
+        open={deleteOpen}
+        onCancel={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
         title="Eliminar médico"
-        message={`¿Estás seguro de que deseas eliminar al médico ${toDelete ? `${toDelete.firstName} ${toDelete.lastName}` : ''}?`}
+        description={`¿Estás seguro de que deseas eliminar al médico ${toDelete ? `${toDelete.firstName} ${toDelete.lastName}` : ''}?`}
       />
     </div>
   )
