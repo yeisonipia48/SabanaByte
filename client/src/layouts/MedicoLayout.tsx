@@ -4,7 +4,7 @@ import type { AuthUser } from '../features/auth/types'
 import BrandLogo from '../features/auth/components/BrandLogo'
 import ThemeToggle from '../components/ThemeToggle'
 
-export type MedicoModuleKey = 'inicio' | 'citas' | 'agenda' | 'lista-espera' | 'pacientes'
+export type MedicoModuleKey = 'inicio' | 'citas' | 'agenda' | 'lista-espera' | 'pacientes' | 'perfil'
 
 interface NavItem {
   key: MedicoModuleKey
@@ -65,23 +65,23 @@ function MedicoLayout({
               <Menu className="h-4 w-4" aria-hidden="true" />
             </button>
             <BrandLogo />
-            <div className="hidden md:block">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                SabanaByte - Portal Transaccional
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Módulo Médico</p>
-            </div>
+            
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <div className="hidden text-right sm:block">
+            <button
+              type="button"
+              onClick={() => onModuleChange('perfil')}
+              className="hidden text-right sm:block"
+              aria-label="Abrir mi perfil"
+            >
               <p className="max-w-[200px] truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {user.fullName}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {user.role} | {user.username}
               </p>
-            </div>
+            </button>
             <button
               onClick={onLogout}
               className="inline-flex items-center gap-1.5 border border-slate-300 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"

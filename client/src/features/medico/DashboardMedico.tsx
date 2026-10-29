@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { Calendar, CalendarClock, Home, ListOrdered, Users } from 'lucide-react'
+import { Calendar, CalendarClock, Home, ListOrdered, UserRound, Users } from 'lucide-react'
 import type { AuthUser } from '../auth/types'
 import MedicoLayout, { type MedicoModuleKey } from '../../layouts/MedicoLayout'
 import MedicoCitasModule from './modules/MedicoCitasModule'
 import MedicoAgendaModule from './modules/MedicoAgendaModule'
 import MedicoListaEsperaModule from './modules/MedicoListaEsperaModule'
 import MedicoPacientesModule from './modules/MedicoPacientesModule'
+import PerfilModule from '../perfil/PerfilModule'
 
 interface DashboardMedicoProps {
   user: AuthUser
   onLogout: () => void
+  onUserUpdate: (user: AuthUser) => void
 }
 
 const navItems = [
@@ -18,9 +20,10 @@ const navItems = [
   { key: 'agenda' as const, label: 'Agenda', icon: <CalendarClock className="h-4 w-4" /> },
   { key: 'lista-espera' as const, label: 'Lista de Espera', icon: <ListOrdered className="h-4 w-4" /> },
   { key: 'pacientes' as const, label: 'Lista de Pacientes', icon: <Users className="h-4 w-4" /> },
+  { key: 'perfil' as const, label: 'Mi perfil', icon: <UserRound className="h-4 w-4" /> },
 ]
 
-function DashboardMedico({ user, onLogout }: DashboardMedicoProps) {
+function DashboardMedico({ user, onLogout, onUserUpdate }: DashboardMedicoProps) {
   const [activeModule, setActiveModule] = useState<MedicoModuleKey>('inicio')
 
   const renderModule = () => {
@@ -33,6 +36,8 @@ function DashboardMedico({ user, onLogout }: DashboardMedicoProps) {
         return <MedicoListaEsperaModule />
       case 'pacientes':
         return <MedicoPacientesModule />
+      case 'perfil':
+        return <PerfilModule user={user} onUserUpdate={onUserUpdate} />
       case 'inicio':
       default:
         return (

@@ -9,6 +9,7 @@ export type AdminModuleKey =
   | 'citas'
   | 'agenda'
   | 'lista-espera'
+  | 'perfil'
 
 export interface UsuarioAdmin {
   id: string

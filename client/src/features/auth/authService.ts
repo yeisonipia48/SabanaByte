@@ -72,6 +72,24 @@ export function clearSession(): void {
   }
 }
 
+/**
+ * Actualiza los datos del usuario en la sesión actual conservando token y expiración.
+ */
+export function updateSessionUser(user: AuthUser): SessionData | null {
+  const session = getSession()
+  if (!session) return null
+
+  const updated: SessionData = { ...session, user }
+
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(updated))
+  } catch {
+    // Almacenamiento no disponible
+  }
+
+  return updated
+}
+
 export function isAuthenticated(): boolean {
   return getSession() !== null
 }

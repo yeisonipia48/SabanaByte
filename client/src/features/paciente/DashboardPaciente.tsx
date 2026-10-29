@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { Calendar, CalendarClock, Home, ListOrdered } from 'lucide-react'
+import { Calendar, CalendarClock, Home, ListOrdered, UserRound } from 'lucide-react'
 import type { AuthUser } from '../auth/types'
 import PacienteLayout, { type PacienteModuleKey } from '../../layouts/PacienteLayout'
 import PacienteCitasModule from './modules/PacienteCitasModule'
 import PacienteAgendaModule from './modules/PacienteAgendaModule'
 import PacienteListaEsperaModule from './modules/PacienteListaEsperaModule'
+import PerfilModule from '../perfil/PerfilModule'
+import ThemeToggle from '../../components/ThemeToggle'
 
 interface DashboardPacienteProps {
   user: AuthUser
   onLogout: () => void
+  onUserUpdate: (user: AuthUser) => void
 }
 
 const navItems = [
@@ -16,9 +19,10 @@ const navItems = [
   { key: 'citas' as const, label: 'Citas', icon: <Calendar className="h-4 w-4" /> },
   { key: 'agenda' as const, label: 'Agenda', icon: <CalendarClock className="h-4 w-4" /> },
   { key: 'lista-espera' as const, label: 'Lista de Espera', icon: <ListOrdered className="h-4 w-4" /> },
+  { key: 'perfil' as const, label: 'Mi perfil', icon: <UserRound className="h-4 w-4" /> },
 ]
 
-function DashboardPaciente({ user, onLogout }: DashboardPacienteProps) {
+function DashboardPaciente({ user, onLogout, onUserUpdate }: DashboardPacienteProps) {
   const [activeModule, setActiveModule] = useState<PacienteModuleKey>('inicio')
 
   const renderModule = () => {
@@ -29,17 +33,23 @@ function DashboardPaciente({ user, onLogout }: DashboardPacienteProps) {
         return <PacienteAgendaModule />
       case 'lista-espera':
         return <PacienteListaEsperaModule />
+      case 'perfil':
+        return <PerfilModule user={user} onUserUpdate={onUserUpdate} />
       case 'inicio':
       default:
         return (
           <div className="space-y-4">
+             <div className="flex justify-end">   <ThemeToggle /></div>
+           
             <div className="border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
+              
               <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                 Módulo Paciente
               </h1>
               <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                 Gestiona tus citas, agenda y lista de espera
               </p>
+              
               <div className="mt-3 border-l-4 border-sky-700 bg-sky-50 px-3 py-2.5 text-xs text-sky-900 sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
                 Bienvenido(a) <strong>{user.fullName}</strong>, has ingresado como{' '}
                 <strong>{user.role}</strong>.

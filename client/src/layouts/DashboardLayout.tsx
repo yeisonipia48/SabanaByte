@@ -26,12 +26,7 @@ function DashboardLayout({
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:gap-4 sm:px-6 sm:py-3">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <BrandLogo />
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-slate-900">
-                SabanaByte - Portal Transaccional
-              </p>
-              <p className="text-xs text-slate-500">Módulo por rol</p>
-            </div>
+          
           </div>
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="hidden text-right sm:block">

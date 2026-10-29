@@ -2,7 +2,7 @@ import { useState } from 'react'
 import LoginPage from './features/auth/LoginPage'
 import DashboardRouter from './components/DashboardRouter'
 import type { AuthUser } from './features/auth/types'
-import { clearSession, getSession, saveSession } from './features/auth/authService'
+import { clearSession, getSession, saveSession, updateSessionUser } from './features/auth/authService'
 
 function getInitialSession() {
   const session = getSession()
@@ -23,6 +23,11 @@ function App() {
     setUser(null)
   }
 
+  const handleUserUpdate = (updatedUser: AuthUser) => {
+    updateSessionUser(updatedUser)
+    setUser(updatedUser)
+  }
+
   if (checkingSession) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-white text-slate-600">
@@ -35,7 +40,7 @@ function App() {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />
   }
 
-  return <DashboardRouter user={user} onLogout={handleLogout} />
+  return <DashboardRouter user={user} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />
 }
 
 export default App
