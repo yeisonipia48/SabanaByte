@@ -7,7 +7,6 @@ import {
   ListOrdered,
   Stethoscope,
   UserCog,
-  UserRound,
   Users,
 } from 'lucide-react'
 import type { AuthUser } from '../auth/types'
@@ -37,7 +36,6 @@ const navItems = [
   { key: 'citas' as const, label: 'Citas', icon: <Calendar className="h-4 w-4" /> },
   { key: 'agenda' as const, label: 'Agenda', icon: <CalendarClock className="h-4 w-4" /> },
   { key: 'lista-espera' as const, label: 'Lista de espera', icon: <ListOrdered className="h-4 w-4" /> },
-  { key: 'perfil' as const, label: 'Mi perfil', icon: <UserRound className="h-4 w-4" /> },
 ]
 
 function DashboardAdministrador({ user, onLogout, onUserUpdate }: DashboardAdministradorProps) {
