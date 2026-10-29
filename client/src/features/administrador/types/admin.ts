@@ -1,0 +1,94 @@
+export type DocumentType = 'CC' | 'TI' | 'CE' | 'PA'
+
+export type AdminModuleKey =
+  | 'inicio'
+  | 'usuarios'
+  | 'pacientes'
+  | 'medicos'
+  | 'especialidades'
+  | 'citas'
+  | 'agenda'
+  | 'lista-espera'
+  | 'perfil'
+
+export interface UsuarioAdmin {
+  id: string
+  rol: string
+  id_rol?: number
+  documentType: DocumentType
+  documentNumber: string
+  email: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface Paciente {
+  id: string
+  documentType: DocumentType
+  documentNumber: string
+  email: string
+  password?: string
+  firstName: string
+  lastName: string
+  birthDate: string
+  phone: string
+  address: string
+  eps?: string
+  bloodType?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
+}
+
+export interface Especialidad {
+  id: string
+  name: string
+  description: string
+}
+
+export interface Medico {
+  id: string
+  documentType: DocumentType
+  documentNumber: string
+  email: string
+  password?: string
+  firstName: string
+  lastName: string
+  specialtyId: string
+  phone?: string
+  tarjetaProfesional?: string
+  consultorio?: string
+}
+
+export type CitaEstado = 'Programada' | 'Atendida' | 'Cancelada' | 'No asistió'
+export type AgendaEstado = 'Disponible' | 'Ocupado' | 'Bloqueado'
+export type ListaEsperaEstado = 'En espera' | 'Atendido' | 'Cancelado'
+
+export interface Cita {
+  id: string
+  patientId: string
+  doctorId: string
+  specialtyId: string
+  date: string
+  time: string
+  status: CitaEstado
+  idCupo?: string
+  motivoConsulta?: string
+}
+
+export interface Agenda {
+  id: string
+  doctorId: string
+  specialtyId: string
+  date: string
+  time: string
+  status: AgendaEstado
+  duracionMinutos?: number
+}
+
+export interface ListaEspera {
+  id: string
+  patientId: string
+  doctorId: string
+  specialtyId: string
+  date: string
+  time: string
+  status: ListaEsperaEstado
+}

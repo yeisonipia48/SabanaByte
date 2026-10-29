@@ -1,24 +1,29 @@
+import ThemeToggle from '../../components/ThemeToggle'
 import InstitutionalHero from './components/InstitutionalHero'
 import LoginForm from './components/LoginForm'
 import MobileBrandBanner from './components/MobileBrandBanner'
+import type { AuthUser } from './types'
 
-function LoginPage() {
+interface LoginPageProps {
+  onLoginSuccess: (user: AuthUser, token: string, remember: boolean) => void
+}
+
+function LoginPage({ onLoginSuccess }: LoginPageProps) {
   return (
-    <div className="min-h-dvh bg-white text-slate-800">
+    <div className="h-dvh overflow-hidden bg-white text-slate-800 dark:bg-zinc-950 dark:text-zinc-200">
       <main
-        className="grid min-h-dvh grid-cols-1 bg-white lg:h-dvh lg:grid-cols-12"
+        className="grid h-dvh grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-white lg:grid-cols-12 lg:grid-rows-1 dark:bg-zinc-950"
         data-purpose="public-login-page"
       >
         <MobileBrandBanner />
 
+        <InstitutionalHero className="lg:col-span-6" />
 
-        <InstitutionalHero className="lg:col-span-7" />
-
-
-        <section className="flex items-center justify-center p-6 lg:col-span-5">
-          <div className="w-full max-w-md">
-            <LoginForm />
+        <section className="h-full min-h-0 overflow-hidden lg:col-span-6">
+          <div className="flex justify-end py-4">
+            <ThemeToggle />
           </div>
+          <LoginForm onLoginSuccess={onLoginSuccess} />
         </section>
       </main>
     </div>
