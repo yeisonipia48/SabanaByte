@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, UserRound } from 'lucide-react'
 import type { AuthUser } from '../features/auth/types'
 import BrandLogo from '../features/auth/components/BrandLogo'
 import type { AdminModuleKey } from '../features/administrador/types/admin'
@@ -39,6 +39,7 @@ function AdminLayout({
     }
   })
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -85,14 +86,6 @@ function AdminLayout({
                 {user.role} | {user.username}
               </p>
             </div>
-            <button
-              onClick={onLogout}
-              className="inline-flex items-center gap-1.5 border border-slate-300 px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Cerrar sesión</span>
-            </button>
           </div>
         </div>
       </header>
@@ -145,14 +138,55 @@ function AdminLayout({
               )
             })}
           </nav>
-          <div className=" p-2 dark:border-slate-800">
+          <div className="relative border-t border-slate-200 p-2 dark:border-slate-800">
+            {profileMenuOpen ? (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  aria-hidden="true"
+                  onClick={() => setProfileMenuOpen(false)}
+                />
+                <div
+                  role="menu"
+                  className="absolute bottom-full left-2 z-50 mb-1 w-48 border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      onModuleChange('perfil')
+                      setProfileMenuOpen(false)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    <UserRound className="h-4 w-4" aria-hidden="true" />
+                    Mi perfil
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileMenuOpen(false)
+                      onLogout()
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    Cerrar sesión
+                  </button>
+                </div>
+              </>
+            ) : null}
             <button
               type="button"
-              onClick={() => onModuleChange('perfil')}
-              className={`flex w-full items-center gap-2 rounded-[50px] border px-2 py-1.5 text-left text-sm transition-colors ${activeModule === 'perfil'
+              onClick={() => setProfileMenuOpen((value) => !value)}
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+              className={`flex w-full items-center gap-2 rounded-[50px] border px-2 py-1.5 text-left text-sm transition-colors ${
+                activeModule === 'perfil'
                   ? 'border-sky-700 bg-sky-50 font-semibold text-sky-900 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-200'
                   : 'border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-                } ${collapsed ? 'justify-center px-0' : 'pl-3 pr-2'}`}
+              } ${collapsed ? 'justify-center px-0' : 'pl-3 pr-2'}`}
               title={collapsed ? 'Mi perfil' : undefined}
               aria-label="Mi perfil"
             >
@@ -209,17 +243,56 @@ function AdminLayout({
                   )
                 })}
               </nav>
-              <div className="border-t border-slate-200 p-2 dark:border-slate-800">
+              <div className="relative border-t border-slate-200 p-2 dark:border-slate-800">
+                {profileMenuOpen ? (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      aria-hidden="true"
+                      onClick={() => setProfileMenuOpen(false)}
+                    />
+                    <div
+                      role="menu"
+                      className="absolute bottom-full left-2 z-50 mb-1 w-48 border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          onModuleChange('perfil')
+                          setProfileMenuOpen(false)
+                          setMobileOpen(false)
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        <UserRound className="h-4 w-4" aria-hidden="true" />
+                        Mi perfil
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setProfileMenuOpen(false)
+                          onLogout()
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                      >
+                        <LogOut className="h-4 w-4" aria-hidden="true" />
+                        Cerrar sesión
+                      </button>
+                    </div>
+                  </>
+                ) : null}
                 <button
                   type="button"
-                  onClick={() => {
-                    onModuleChange('perfil')
-                    setMobileOpen(false)
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-[50px] border px-3 py-1.5 text-left text-sm transition-colors ${activeModule === 'perfil'
+                  onClick={() => setProfileMenuOpen((value) => !value)}
+                  aria-haspopup="menu"
+                  aria-expanded={profileMenuOpen}
+                  className={`flex w-full items-center gap-2 rounded-[50px] border px-3 py-1.5 text-left text-sm transition-colors ${
+                    activeModule === 'perfil'
                       ? 'border-sky-700 bg-sky-50 font-semibold text-sky-900 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-200'
                       : 'border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-                    }`}
+                  }`}
                   aria-label="Mi perfil"
                 >
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-700 text-xs font-semibold text-white">

@@ -779,12 +779,7 @@ function LoginForm({ onLoginSuccess }: LoginFormProps) {
             )}
           </div>
 
-          <div className="mt-2 border-t border-slate-100 pt-2 text-[10px] text-slate-500 sm:mt-2.5 sm:pt-2 sm:text-[11px] max-[760px]:hidden">
-            <p className="font-semibold text-slate-600">Credenciales de prueba:</p>
-            <p className="mt-0.5">Paciente: 1023456789 / Paciente123*</p>
-            <p>Médico: 1034567890 / Medico123*</p>
-            <p>Administrador: 1045678901 / Admin123*</p>
-          </div>
+        
         </div>
       </div>
     </section>

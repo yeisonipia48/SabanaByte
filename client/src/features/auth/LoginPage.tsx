@@ -1,3 +1,4 @@
+import ThemeToggle from '../../components/ThemeToggle'
 import InstitutionalHero from './components/InstitutionalHero'
 import LoginForm from './components/LoginForm'
 import MobileBrandBanner from './components/MobileBrandBanner'
@@ -19,6 +20,7 @@ function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <InstitutionalHero className="lg:col-span-6" />
 
         <section className="h-full min-h-0 overflow-hidden lg:col-span-6">
+          <div className='flex justify-end py-6'><ThemeToggle /></div>
           <LoginForm onLoginSuccess={onLoginSuccess} />
         </section>
       </main>
