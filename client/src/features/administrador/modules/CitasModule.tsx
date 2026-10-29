@@ -183,6 +183,7 @@ function CitasModule() {
         const cupo = cupos.find((c) => String(c.id_cupo) === form.cupoId)
         await adminService.addCita({
           ...form,
+          idCupo: form.cupoId,
           date: cupo?.fecha_cupo ?? form.date,
           time: cupo?.hora_cupo ?? form.time,
         })
