@@ -25,14 +25,14 @@ function BrandLogo({ tone = 'dark' }: BrandLogoProps) {
             Sabana
           </span>
           <span
-            className={`text-lg font-bold ${isLight ? 'text-sky-300' : 'text-sky-700 dark:text-sky-400'
+            className={`text-lg font-bold ${isLight ? 'text-sky-300' : 'text-sky-700 dark:text-sky-300'
               }`}
           >
             Byte
           </span>
         </div>
         <p
-          className={`mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${isLight ? 'text-sky-200/80' : 'text-slate-500 dark:text-slate-400'
+          className={`mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] ${isLight ? 'text-sky-200/80' : 'text-slate-500 dark:text-zinc-400'
             }`}
         >
           Portal EPS Transaccional

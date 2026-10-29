@@ -10,9 +10,9 @@ interface LoginPageProps {
 
 function LoginPage({ onLoginSuccess }: LoginPageProps) {
   return (
-    <div className="h-dvh overflow-hidden bg-white text-slate-800 dark:bg-slate-950 dark:text-slate-200">
+    <div className="h-dvh overflow-hidden bg-white text-slate-800 dark:bg-zinc-950 dark:text-zinc-200">
       <main
-        className="grid h-dvh grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-white lg:grid-cols-12 lg:grid-rows-1 dark:bg-slate-950"
+        className="grid h-dvh grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-white lg:grid-cols-12 lg:grid-rows-1 dark:bg-zinc-950"
         data-purpose="public-login-page"
       >
         <MobileBrandBanner />
