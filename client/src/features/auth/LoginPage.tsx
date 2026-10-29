@@ -10,9 +10,9 @@ interface LoginPageProps {
 
 function LoginPage({ onLoginSuccess }: LoginPageProps) {
   return (
-    <div className="h-dvh overflow-hidden bg-white text-slate-800">
+    <div className="h-dvh overflow-hidden bg-white text-slate-800 dark:bg-slate-950 dark:text-slate-200">
       <main
-        className="grid h-dvh grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-white lg:grid-cols-12 lg:grid-rows-1"
+        className="grid h-dvh grid-cols-1 grid-rows-[auto_1fr] overflow-hidden bg-white lg:grid-cols-12 lg:grid-rows-1 dark:bg-slate-950"
         data-purpose="public-login-page"
       >
         <MobileBrandBanner />
@@ -20,7 +20,9 @@ function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <InstitutionalHero className="lg:col-span-6" />
 
         <section className="h-full min-h-0 overflow-hidden lg:col-span-6">
-          <div className='flex justify-end py-6'><ThemeToggle /></div>
+          <div className="flex justify-end py-4">
+            <ThemeToggle />
+          </div>
           <LoginForm onLoginSuccess={onLoginSuccess} />
         </section>
       </main>
