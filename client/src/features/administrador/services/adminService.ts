@@ -15,11 +15,13 @@ import {
   listaEsperaService,
   medicosService,
   pacientesService,
+  rolesService,
   usuariosService,
 } from '../../../services'
 import { httpClient } from '../../../lib/httpClient'
 import { API_CONFIG } from '../../../config/api'
-import type { RegistroUsuarioApiRequest } from '../../../types/api/auth'
+import type { RegistroUsuarioApiRequest, RolApi } from '../../../types/api/auth'
+import { normalizeRole } from '../../../types/api/auth'
 import type { CupoDisponibleResponseApi, CuposDisponiblesQuery } from '../../../types/api/cupos'
 
 const DEFAULT_ESPECIALIDADES: Especialidad[] = [
@@ -32,6 +34,21 @@ const DEFAULT_ESPECIALIDADES: Especialidad[] = [
   { id: 'Oftalmología', name: 'Oftalmología', description: 'Salud visual y ocular' },
   { id: 'Ginecología', name: 'Ginecología', description: 'Salud de la mujer y maternidad' },
 ]
+
+async function resolveRoleId(roleName: string): Promise<number> {
+  const roles = await rolesService.getAll()
+  const match = roles.find(
+    (candidate) => normalizeRole(candidate.rol) === normalizeRole(roleName),
+  )
+
+  if (!match) {
+    throw new Error(
+      `No existe el rol ${roleName} en el sistema. Contacta al administrador.`,
+    )
+  }
+
+  return match.id
+}
 
 export const adminService = {
   // ==================== PACIENTES ====================
@@ -53,12 +70,17 @@ export const adminService = {
   },
 
   async addPaciente(data: Omit<Paciente, 'id'>): Promise<Paciente> {
+    const password = data.password?.trim() ?? ''
+    if (!password) {
+      throw new Error('La contraseña es obligatoria para crear el paciente.')
+    }
+
     const payload: RegistroUsuarioApiRequest = {
-      id_rol: 3, // Rol Paciente en PostgreSQL
+      id_rol: await resolveRoleId('paciente'),
       tipo_documento: data.documentType,
       numero_documento: data.documentNumber.trim(),
       email: data.email.trim(),
-      password: data.password?.trim() || 'Paciente123*',
+      password,
       nombres: data.firstName.trim(),
       apellidos: data.lastName.trim(),
       fecha_nacimiento: data.birthDate || '2000-01-01',
@@ -125,12 +147,17 @@ export const adminService = {
   },
 
   async addMedico(data: Omit<Medico, 'id'>): Promise<Medico> {
+    const password = data.password?.trim() ?? ''
+    if (!password) {
+      throw new Error('La contraseña es obligatoria para crear el médico.')
+    }
+
     const payload: RegistroUsuarioApiRequest = {
-      id_rol: 2, // Rol Médico en PostgreSQL
+      id_rol: await resolveRoleId('medico'),
       tipo_documento: data.documentType,
       numero_documento: data.documentNumber.trim(),
       email: data.email.trim(),
-      password: data.password?.trim() || 'Medico123*',
+      password,
       nombres: data.firstName.trim(),
       apellidos: data.lastName.trim(),
       telefono: data.phone?.trim() || '0000000000',
@@ -393,12 +420,17 @@ export const adminService = {
     email: string
     password?: string
   }): Promise<void> {
+    const password = data.password?.trim() ?? ''
+    if (!password) {
+      throw new Error('La contraseña es obligatoria para crear el usuario.')
+    }
+
     await usuariosService.create({
       id_rol: data.id_rol,
       tipo_documento: data.tipo_documento,
       numero_documento: data.numero_documento.trim(),
       email: data.email.trim(),
-      password: data.password?.trim() || 'Usuario123*',
+      password,
     })
   },
 
@@ -415,6 +447,10 @@ export const adminService = {
 
   async removeUsuario(id: string): Promise<void> {
     await usuariosService.remove(Number(id))
+  },
+
+  async getRoles(): Promise<RolApi[]> {
+    return rolesService.getAll()
   },
 
   // ==================== ESPECIALIDADES ====================

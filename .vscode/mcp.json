@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "disponibilidad-clinica": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/home/yeison/Documents/citasClinicas/mcpClinica",
+        "run",
+        "server.py"
+      ],
+      "env": {
+        "CLINICA_API_URL": "http://localhost:8000"
+      }
+    }
+  }
+}

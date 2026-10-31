@@ -41,6 +41,8 @@ function CitasModule() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterDate, setFilterDate] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
   const [selected, setSelected] = useState<Cita | null>(null)
@@ -97,8 +99,11 @@ function CitasModule() {
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
-    if (!term) return items
     return items.filter((item) => {
+      if (filterStatus && item.status !== filterStatus) return false
+      if (filterDate && item.date.slice(0, 10) !== filterDate) return false
+      if (!term) return true
+
       const p = pacientes.find((x) => x.id === item.patientId)
       const m = medicos.find((x) => x.id === item.doctorId)
       return (
@@ -110,7 +115,7 @@ function CitasModule() {
         item.status.toLowerCase().includes(term)
       )
     })
-  }, [items, pacientes, medicos, search])
+  }, [filterDate, filterStatus, items, pacientes, medicos, search])
 
   const getPaciente = (id: string) => {
     const p = pacientes.find((x) => x.id === id)
@@ -227,17 +232,40 @@ function CitasModule() {
         onCreate={openCreate}
         createLabel="Crear cita"
       />
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <select
+          value={filterStatus}
+          onChange={(event) => setFilterStatus(event.target.value)}
+          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          aria-label="Filtrar por estado"
+        >
+          <option value="">Todos los estados</option>
+          {ESTADOS.map((estado) => (
+            <option key={estado} value={estado}>
+              {estado}
+            </option>
+          ))}
+        </select>
+        <input
+          type="date"
+          value={filterDate}
+          onChange={(event) => setFilterDate(event.target.value)}
+          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          aria-label="Filtrar por fecha"
+        />
+      </div>
       {loading && (
-        <div className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
-          Cargando citas y disponibilidad desde la base de datos...
+        <div className="loading-banner animate-fade-in rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+          Cargando citas y disponibilidad desde la base de datos…
         </div>
       )}
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="animate-fade-up rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
           {error}
         </div>
       )}
       <AdminDataTable
+        loading={loading}
         columns={[
           { header: 'Paciente', render: (row: Cita) => getPaciente(row.patientId) },
           { header: 'Médico', render: (row: Cita) => getMedico(row.doctorId) },

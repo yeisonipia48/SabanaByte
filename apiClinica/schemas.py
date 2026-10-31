@@ -1,7 +1,58 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
 from datetime import datetime, date, time
-from typing import Literal
+from typing import Annotated, Any, Literal
 from estados import EstadoCupo
+
+FORMATO_HORA_12 = "%I:%M %p"
+FORMATO_FECHA_HORA_12 = "%Y-%m-%d %I:%M %p"
+
+
+def _normalizar_sufijo_hora(texto: str) -> str:
+    normalizado = " ".join(texto.strip().upper().split())
+    for viejo, nuevo in (
+        ("A. M.", "AM"),
+        ("P. M.", "PM"),
+        ("A.M.", "AM"),
+        ("P.M.", "PM"),
+        ("A.M", "AM"),
+        ("P.M", "PM"),
+        ("A M", "AM"),
+        ("P M", "PM"),
+    ):
+        normalizado = normalizado.replace(viejo, nuevo)
+    return normalizado
+
+
+def _parsear_hora(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    texto = _normalizar_sufijo_hora(value)
+    for formato in ("%I:%M %p", "%I:%M:%S %p", "%I:%M%p", "%I:%M:%S%p"):
+        try:
+            return datetime.strptime(texto, formato).time()
+        except ValueError:
+            continue
+    return value
+
+
+def _formatear_hora_12(value: time) -> str:
+    return value.strftime(FORMATO_HORA_12)
+
+
+def _formatear_fecha_hora_12(value: datetime) -> str:
+    return value.strftime(FORMATO_FECHA_HORA_12)
+
+
+Hora12 = Annotated[
+    time,
+    BeforeValidator(_parsear_hora),
+    PlainSerializer(_formatear_hora_12, return_type=str),
+]
+Hora12Input = Annotated[time, BeforeValidator(_parsear_hora)]
+FechaHora12 = Annotated[
+    datetime,
+    PlainSerializer(_formatear_fecha_hora_12, return_type=str),
+]
 
 
 class ErrorResponseSchema(BaseModel):
@@ -85,10 +136,10 @@ class UsuarioCreadoResponseSchema(BaseModel):
         description="Indica si el usuario puede iniciar sesión.",
         examples=[True],
     )
-    created_at: datetime = Field(
+    created_at: FechaHora12 = Field(
         ...,
-        description="Fecha y hora de creación del usuario.",
-        examples=["2026-02-25T14:30:00"],
+        description="Fecha y hora de creación del usuario en formato de 12 horas.",
+        examples=["2026-02-25 02:30 PM"],
     )
 
     model_config = ConfigDict(
@@ -101,7 +152,7 @@ class UsuarioCreadoResponseSchema(BaseModel):
                 "numero_documento": "1023456789",
                 "email": "ana.gomez@example.com",
                 "is_active": True,
-                "created_at": "2026-02-25T14:30:00",
+                "created_at": "2026-02-25 02:30 PM",
             }
         },
     )
@@ -138,10 +189,10 @@ class UsuarioResponseSchema(BaseModel):
         description="Indica si el usuario puede iniciar sesión.",
         examples=[True],
     )
-    created_at: datetime = Field(
+    created_at: FechaHora12 = Field(
         ...,
-        description="Fecha y hora de creación del usuario.",
-        examples=["2026-02-25T14:30:00"],
+        description="Fecha y hora de creación del usuario en formato de 12 horas.",
+        examples=["2026-02-25 02:30 PM"],
     )
 
     model_config = ConfigDict(
@@ -154,7 +205,7 @@ class UsuarioResponseSchema(BaseModel):
                 "numero_documento": "1023456789",
                 "email": "ana.gomez@example.com",
                 "is_active": True,
-                "created_at": "2026-02-25T14:30:00",
+                "created_at": "2026-02-25 02:30 PM",
             }
         },
     )
@@ -807,15 +858,21 @@ class AgendaCreateSchema(BaseModel):
         description="Duración de cada cita en minutos.",
         examples=[30],
     )
-    hora_inicio: time = Field(
+    hora_inicio: Hora12Input = Field(
         ...,
-        description="Hora de inicio de la atención diaria.",
-        examples=["08:00:00"],
+        description=(
+            "Hora de inicio de la atención diaria. Acepta formato de 12 horas "
+            "(08:00 AM) o ISO 8601 (08:00:00)."
+        ),
+        examples=["08:00 AM"],
     )
-    hora_fin: time = Field(
+    hora_fin: Hora12Input = Field(
         ...,
-        description="Hora de finalización de la atención diaria.",
-        examples=["12:00:00"],
+        description=(
+            "Hora de finalización de la atención diaria. Acepta formato de 12 "
+            "horas (12:00 PM) o ISO 8601 (12:00:00)."
+        ),
+        examples=["12:00 PM"],
     )
 
     model_config = ConfigDict(
@@ -825,8 +882,8 @@ class AgendaCreateSchema(BaseModel):
                 "fecha_inicio": "2026-03-02",
                 "fecha_fin": "2026-03-06",
                 "duracion_cita": 30,
-                "hora_inicio": "08:00:00",
-                "hora_fin": "12:00:00",
+                "hora_inicio": "08:00 AM",
+                "hora_fin": "12:00 PM",
             }
         }
     )
@@ -858,15 +915,15 @@ class AgendaCreateResponseSchema(BaseModel):
         description="Duración de cada cita en minutos.",
         examples=[30],
     )
-    hora_inicio: time = Field(
+    hora_inicio: Hora12 = Field(
         ...,
-        description="Hora de inicio de la atención diaria.",
-        examples=["08:00:00"],
+        description="Hora de inicio de la atención diaria en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:00 AM"],
     )
-    hora_fin: time = Field(
+    hora_fin: Hora12 = Field(
         ...,
-        description="Hora de finalización de la atención diaria.",
-        examples=["12:00:00"],
+        description="Hora de finalización de la atención diaria en formato de 12 horas (HH:MM AM/PM).",
+        examples=["12:00 PM"],
     )
     estado: str = Field(
         ...,
@@ -883,8 +940,8 @@ class AgendaCreateResponseSchema(BaseModel):
                 "fecha_inicio": "2026-03-02",
                 "fecha_fin": "2026-03-06",
                 "duracion_cita": 30,
-                "hora_inicio": "08:00:00",
-                "hora_fin": "12:00:00",
+                "hora_inicio": "08:00 AM",
+                "hora_fin": "12:00 PM",
                 "estado": "activo",
             }
         },
@@ -917,15 +974,15 @@ class AgendaResponseSchema(BaseModel):
         description="Duración de cada cita en minutos.",
         examples=[30],
     )
-    hora_inicio: time = Field(
+    hora_inicio: Hora12 = Field(
         ...,
-        description="Hora de inicio de la atención diaria.",
-        examples=["08:00:00"],
+        description="Hora de inicio de la atención diaria en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:00 AM"],
     )
-    hora_fin: time = Field(
+    hora_fin: Hora12 = Field(
         ...,
-        description="Hora de finalización de la atención diaria.",
-        examples=["12:00:00"],
+        description="Hora de finalización de la atención diaria en formato de 12 horas (HH:MM AM/PM).",
+        examples=["12:00 PM"],
     )
     estado: str = Field(
         ...,
@@ -942,8 +999,8 @@ class AgendaResponseSchema(BaseModel):
                 "fecha_inicio": "2026-03-02",
                 "fecha_fin": "2026-03-06",
                 "duracion_cita": 30,
-                "hora_inicio": "08:00:00",
-                "hora_fin": "12:00:00",
+                "hora_inicio": "08:00 AM",
+                "hora_fin": "12:00 PM",
                 "estado": "activo",
             }
         },
@@ -971,15 +1028,15 @@ class AgendaUpdateSchema(BaseModel):
         description="Nueva duración de la cita en minutos. Si se omite, no cambia.",
         examples=[30],
     )
-    hora_inicio: time | None = Field(
+    hora_inicio: Hora12Input | None = Field(
         None,
-        description="Nueva hora de inicio. Si se omite, no cambia.",
-        examples=["08:00:00"],
+        description="Nueva hora de inicio (12 horas o ISO 8601). Si se omite, no cambia.",
+        examples=["08:00 AM"],
     )
-    hora_fin: time | None = Field(
+    hora_fin: Hora12Input | None = Field(
         None,
-        description="Nueva hora de fin. Si se omite, no cambia.",
-        examples=["12:00:00"],
+        description="Nueva hora de fin (12 horas o ISO 8601). Si se omite, no cambia.",
+        examples=["12:00 PM"],
     )
     estado: str | None = Field(
         None,
@@ -1036,10 +1093,10 @@ class CupoResponseSchema(BaseModel):
         description="Fecha del cupo.",
         examples=["2026-03-02"],
     )
-    hora_cupo: time = Field(
+    hora_cupo: Hora12 = Field(
         ...,
-        description="Hora del cupo.",
-        examples=["08:30:00"],
+        description="Hora del cupo en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:30 AM"],
     )
     estado: str = Field(
         ...,
@@ -1054,7 +1111,7 @@ class CupoResponseSchema(BaseModel):
                 "id": 301,
                 "id_agenda_medica": 21,
                 "fecha_cupo": "2026-03-02",
-                "hora_cupo": "08:30:00",
+                "hora_cupo": "08:30 AM",
                 "estado": "disponible",
             }
         },
@@ -1072,10 +1129,10 @@ class CupoDisponibleResponseSchema(BaseModel):
         description="Fecha del cupo.",
         examples=["2026-03-02"],
     )
-    hora_cupo: time = Field(
+    hora_cupo: Hora12 = Field(
         ...,
-        description="Hora del cupo.",
-        examples=["08:30:00"],
+        description="Hora del cupo en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:30 AM"],
     )
     duracion_cita: int = Field(
         ...,
@@ -1109,7 +1166,7 @@ class CupoDisponibleResponseSchema(BaseModel):
             "example": {
                 "id_cupo": 301,
                 "fecha_cupo": "2026-03-02",
-                "hora_cupo": "08:30:00",
+                "hora_cupo": "08:30 AM",
                 "duracion_cita": 30,
                 "id_medico": 9,
                 "medico": "Rodríguez Peña Carlos Andrés",
@@ -1131,10 +1188,10 @@ class CupoDetalleResponseSchema(BaseModel):
         description="Fecha del cupo.",
         examples=["2026-03-02"],
     )
-    hora_cupo: time = Field(
+    hora_cupo: Hora12 = Field(
         ...,
-        description="Hora del cupo.",
-        examples=["08:30:00"],
+        description="Hora del cupo en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:30 AM"],
     )
     estado_cupo: str = Field(
         ...,
@@ -1178,7 +1235,7 @@ class CupoDetalleResponseSchema(BaseModel):
             "example": {
                 "id_cupo": 301,
                 "fecha_cupo": "2026-03-02",
-                "hora_cupo": "08:30:00",
+                "hora_cupo": "08:30 AM",
                 "estado_cupo": "disponible",
                 "duracion_cita": 30,
                 "estado_agenda": "activo",
@@ -1258,15 +1315,15 @@ class CitaResponseSchema(BaseModel):
         description="Estado de la cita: pendiente, confirmada, atendida, cancelada o no_asistio.",
         examples=["pendiente"],
     )
-    created_at: datetime = Field(
+    created_at: FechaHora12 = Field(
         ...,
-        description="Fecha y hora de creación de la cita.",
-        examples=["2026-02-25T14:30:00"],
+        description="Fecha y hora de creación de la cita en formato de 12 horas.",
+        examples=["2026-02-25 02:30 PM"],
     )
-    updated_at: datetime = Field(
+    updated_at: FechaHora12 = Field(
         ...,
-        description="Fecha y hora de la última actualización.",
-        examples=["2026-02-25T14:30:00"],
+        description="Fecha y hora de la última actualización en formato de 12 horas.",
+        examples=["2026-02-25 02:30 PM"],
     )
 
     model_config = ConfigDict(
@@ -1278,8 +1335,8 @@ class CitaResponseSchema(BaseModel):
                 "id_paciente": 12,
                 "motivo_consulta": "Dolor en el pecho al hacer ejercicio",
                 "estado": "pendiente",
-                "created_at": "2026-02-25T14:30:00",
-                "updated_at": "2026-02-25T14:30:00",
+                "created_at": "2026-02-25 02:30 PM",
+                "updated_at": "2026-02-25 02:30 PM",
             }
         },
     )
@@ -1326,10 +1383,10 @@ class CitaDetalleResponseSchema(CitaResponseSchema):
         description="Fecha de la cita.",
         examples=["2026-03-02"],
     )
-    hora_cupo: time = Field(
+    hora_cupo: Hora12 = Field(
         ...,
-        description="Hora de la cita.",
-        examples=["08:30:00"],
+        description="Hora de la cita en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:30 AM"],
     )
 
     model_config = ConfigDict(
@@ -1341,8 +1398,8 @@ class CitaDetalleResponseSchema(CitaResponseSchema):
                 "id_paciente": 12,
                 "motivo_consulta": "Dolor en el pecho al hacer ejercicio",
                 "estado": "pendiente",
-                "created_at": "2026-02-25T14:30:00",
-                "updated_at": "2026-02-25T14:30:00",
+                "created_at": "2026-02-25 02:30 PM",
+                "updated_at": "2026-02-25 02:30 PM",
                 "paciente": "Ana María Gómez Ruiz",
                 "numero_documento": "1023456789",
                 "email": "ana.gomez@example.com",
@@ -1351,7 +1408,7 @@ class CitaDetalleResponseSchema(CitaResponseSchema):
                 "especialidad": "Cardiología",
                 "consultorio": "Consultorio 302",
                 "fecha_cupo": "2026-03-02",
-                "hora_cupo": "08:30:00",
+                "hora_cupo": "08:30 AM",
             }
         },
     )
@@ -1431,20 +1488,20 @@ class ListaEsperaResponseSchema(BaseModel):
         description="Identificador del cupo ofrecido al paciente.",
         examples=[301],
     )
-    fecha_solicitud: datetime = Field(
+    fecha_solicitud: FechaHora12 = Field(
         ...,
-        description="Fecha y hora en que se creó la solicitud.",
-        examples=["2026-02-25T15:00:00"],
+        description="Fecha y hora en que se creó la solicitud, en formato de 12 horas.",
+        examples=["2026-02-25 03:00 PM"],
     )
-    fecha_oferta: datetime | None = Field(
+    fecha_oferta: FechaHora12 | None = Field(
         None,
-        description="Fecha y hora en que se ofreció un cupo.",
-        examples=["2026-02-26T09:00:00"],
+        description="Fecha y hora en que se ofreció un cupo, en formato de 12 horas.",
+        examples=["2026-02-26 09:00 AM"],
     )
-    fecha_expiracion: datetime | None = Field(
+    fecha_expiracion: FechaHora12 | None = Field(
         None,
-        description="Fecha y hora en que expira la oferta.",
-        examples=["2026-02-28T09:00:00"],
+        description="Fecha y hora en que expira la oferta, en formato de 12 horas.",
+        examples=["2026-02-28 09:00 AM"],
     )
     estado: str = Field(
         ...,
@@ -1454,10 +1511,10 @@ class ListaEsperaResponseSchema(BaseModel):
         ),
         examples=["pendiente"],
     )
-    created_at: datetime = Field(
+    created_at: FechaHora12 = Field(
         ...,
         description="Fecha y hora de creación del registro.",
-        examples=["2026-02-25T15:00:00"],
+        examples=["2026-02-25 03:00 PM"],
     )
 
     model_config = ConfigDict(
@@ -1469,11 +1526,11 @@ class ListaEsperaResponseSchema(BaseModel):
                 "id_medico": 9,
                 "prioridad": 1,
                 "id_cupo_ofrecido": 301,
-                "fecha_solicitud": "2026-02-25T15:00:00",
-                "fecha_oferta": "2026-02-26T09:00:00",
-                "fecha_expiracion": "2026-02-28T09:00:00",
+                "fecha_solicitud": "2026-02-25 03:00 PM",
+                "fecha_oferta": "2026-02-26 09:00 AM",
+                "fecha_expiracion": "2026-02-28 09:00 AM",
                 "estado": "pendiente",
-                "created_at": "2026-02-25T15:00:00",
+                "created_at": "2026-02-25 03:00 PM",
             }
         },
     )
@@ -1520,10 +1577,10 @@ class ListaEsperaDetalleResponseSchema(ListaEsperaResponseSchema):
         description="Fecha del cupo ofrecido.",
         examples=["2026-03-02"],
     )
-    hora_cupo: time | None = Field(
+    hora_cupo: Hora12 | None = Field(
         None,
-        description="Hora del cupo ofrecido.",
-        examples=["08:30:00"],
+        description="Hora del cupo ofrecido en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:30 AM"],
     )
 
     model_config = ConfigDict(
@@ -1535,18 +1592,18 @@ class ListaEsperaDetalleResponseSchema(ListaEsperaResponseSchema):
                 "id_medico": 9,
                 "prioridad": 1,
                 "id_cupo_ofrecido": 301,
-                "fecha_solicitud": "2026-02-25T15:00:00",
-                "fecha_oferta": "2026-02-26T09:00:00",
-                "fecha_expiracion": "2026-02-28T09:00:00",
+                "fecha_solicitud": "2026-02-25 03:00 PM",
+                "fecha_oferta": "2026-02-26 09:00 AM",
+                "fecha_expiracion": "2026-02-28 09:00 AM",
                 "estado": "ofrecida",
-                "created_at": "2026-02-25T15:00:00",
+                "created_at": "2026-02-25 03:00 PM",
                 "paciente": "Ana María Gómez Ruiz",
                 "numero_documento": "1023456789",
                 "email": "ana.gomez@example.com",
                 "medico": "Rodríguez Peña Carlos Andrés",
                 "especialidad": "Cardiología",
                 "fecha_cupo": "2026-03-02",
-                "hora_cupo": "08:30:00",
+                "hora_cupo": "08:30 AM",
             }
         },
     )
@@ -1588,18 +1645,18 @@ class OfertaCupoResponseSchema(BaseModel):
         description="Fecha del cupo ofrecido.",
         examples=["2026-03-02"],
     )
-    hora_cupo: time = Field(
+    hora_cupo: Hora12 = Field(
         ...,
-        description="Hora del cupo ofrecido.",
-        examples=["08:30:00"],
+        description="Hora del cupo ofrecido en formato de 12 horas (HH:MM AM/PM).",
+        examples=["08:30 AM"],
     )
-    fecha_expiracion: datetime = Field(
+    fecha_expiracion: FechaHora12 = Field(
         ...,
         description=(
             "Fecha y hora máxima para confirmar la oferta. Equivale a 48 horas "
             "desde la oferta, pero nunca supera la hora de la cita."
         ),
-        examples=["2026-02-28T09:00:00"],
+        examples=["2026-02-28 09:00 AM"],
     )
 
     model_config = ConfigDict(
@@ -1612,8 +1669,8 @@ class OfertaCupoResponseSchema(BaseModel):
                 "id_medico": 9,
                 "medico": "Rodríguez Peña Carlos Andrés",
                 "fecha_cupo": "2026-03-02",
-                "hora_cupo": "08:30:00",
-                "fecha_expiracion": "2026-02-28T09:00:00",
+                "hora_cupo": "08:30 AM",
+                "fecha_expiracion": "2026-02-28 09:00 AM",
             }
         },
     )

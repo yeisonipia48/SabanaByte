@@ -71,20 +71,51 @@ export interface MedicoApi {
   consultorio: string
 }
 
+export type RoleKind = 'admin' | 'medico' | 'paciente' | 'otro'
+
+/**
+ * Equivalente a normalize_role() de TestPhp/helpers.php.
+ */
+export function normalizeRole(roleName: string): RoleKind {
+  const value = roleName
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  if (value === '') {
+    return 'otro'
+  }
+
+  if (value.includes('admin')) {
+    return 'admin'
+  }
+
+  if (value.includes('medic')) {
+    return 'medico'
+  }
+
+  if (value.includes('pacient')) {
+    return 'paciente'
+  }
+
+  return 'otro'
+}
+
 export function mapRoleToFrontend(roleName: string): Role {
-  const normalized = roleName.trim().toLowerCase()
-  if (normalized === 'medico' || normalized === 'médico') {
-    return 'Medico'
+  switch (normalizeRole(roleName)) {
+    case 'medico':
+      return 'Medico'
+    case 'admin':
+      return 'Administrador'
+    default:
+      return 'Paciente'
   }
-  if (normalized === 'administrador' || normalized === 'admin') {
-    return 'Administrador'
-  }
-  // Default to Paciente for paciente/other
-  return 'Paciente'
 }
 
 export function mapFrontendRoleToId(role: Role, roles: RolApi[]): number | null {
-  const normalizedRole = role.toLowerCase()
-  const match = roles.find((r) => r.rol.trim().toLowerCase() === normalizedRole)
+  const kind = normalizeRole(role)
+  const match = roles.find((candidate) => normalizeRole(candidate.rol) === kind)
+
   return match?.id ?? null
 }

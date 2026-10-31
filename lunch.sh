@@ -10,8 +10,8 @@ if [ -f .env ]; then
 fi
 
 echo "Construyendo las imágenes..."
-docker build --no-cache -t api-clinica:v1 .
-docker build --no-cache -t frontendcitas:v1 TestPhp/.
+docker build --no-cache -t api-clinica:v1 apiClinica/.
+docker build --no-cache -t frontendcitas:v1 client/.
 
 echo "Gestionando secretos de Docker Swarm..."
 docker secret inspect postgres_user >/dev/null 2>&1 || echo "$postgres_user" | docker secret create postgres_user -
@@ -20,16 +20,17 @@ docker secret inspect postgres_host >/dev/null 2>&1 || echo "$postgres_host" | d
 docker secret inspect postgres_db >/dev/null 2>&1 || echo "$postgres_db" | docker secret create postgres_db -
 
 echo "Desplegando el stack en Docker Swarm..."
-docker stack deploy -c stack.yaml apiclinica_stack
-docker service update --force apiclinica_stack_api
+docker stack deploy -c stack.yaml api-clinica
+docker service update --force api-clinica_api
 
 echo "Esperando a que los servicios inicien..."
 sleep 5
 
 echo "Aplicando migraciones con Alembic..."
-contenedor_api=$(docker ps -q --filter "label=com.docker.swarm.service.name=apiclinica_stack_api" | head -n1)
+contenedor_api=$(docker ps | grep api-clinica_api | awk '{print $1}' | head -n 1)
 if [ -n "$contenedor_api" ]; then
-    docker exec -it "$contenedor_api" alembic -c alembicApi/alembic.ini upgrade head
+    docker exec -it "$contenedor_api" alembic -c alembicApi/ revision --auto-generate -m "configuracion inicial"
+    docker exec -it "$contenedor_api" alembic -c alembicApi/ upgrade +1
     echo "¡Migraciones aplicadas con éxito!"
 else
     echo "Aviso: No se encontró el contenedor de la API en ejecución para correr Alembic."

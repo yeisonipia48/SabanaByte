@@ -23,10 +23,14 @@ function AdminToolbar({
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <input
             type="search"
+            name="search"
+            aria-label="Buscar"
+            autoComplete="off"
+            spellCheck={false}
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Buscar..."
-            className="w-full border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:w-64"
+            placeholder="Buscar…"
+            className="w-full border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:w-64"
           />
         </div>
         <button

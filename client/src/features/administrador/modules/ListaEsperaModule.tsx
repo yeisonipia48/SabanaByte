@@ -180,17 +180,18 @@ function ListaEsperaModule() {
       </div>
 
       {loading && (
-        <div className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
-          Cargando solicitudes de lista de espera desde la base de datos...
+        <div className="loading-banner animate-fade-in rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+          Cargando solicitudes de lista de espera desde la base de datos…
         </div>
       )}
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="animate-fade-up rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
           {error}
         </div>
       )}
 
       <AdminDataTable
+        loading={loading}
         columns={[
           { header: 'Paciente', render: (row: ListaEspera) => getPaciente(row.patientId) },
           { header: 'Médico preferido', render: (row: ListaEspera) => getMedico(row.doctorId) },

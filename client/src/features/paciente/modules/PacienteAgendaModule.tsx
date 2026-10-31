@@ -1,297 +1,310 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Edit, Eye, Trash2 } from 'lucide-react'
-import AdminToolbar from '../../administrador/components/AdminToolbar'
-import AdminDataTable from '../../administrador/components/AdminDataTable'
+import { CalendarPlus, RefreshCw, Search } from 'lucide-react'
 import AdminModal from '../../administrador/components/AdminModal'
 import AdminFormField from '../../administrador/components/AdminFormField'
-import ConfirmDeleteModal from '../../administrador/components/ConfirmDeleteModal'
-import { adminService } from '../../administrador/services/adminService'
-import type { Agenda, AgendaEstado, Especialidad, Medico } from '../../administrador/types/admin'
+import { cuposService } from '../../../services/cupos.service'
+import { medicosService } from '../../../services/medicos.service'
+import { citasService } from '../../../services/citas.service'
+import type { CupoDisponibleResponseApi } from '../../../types/api/cupos'
+import type { MedicoResponseApi } from '../../../types/api/medicos'
+import type { AuthUser } from '../../auth/types'
 
-const ESTADOS: AgendaEstado[] = ['Disponible', 'Ocupado', 'Bloqueado']
-
-interface FormState {
-  doctorId: string
-  specialtyId: string
-  date: string
-  time: string
-  status: AgendaEstado
+interface PacienteAgendaModuleProps {
+  user: AuthUser
 }
 
-const emptyForm: FormState = {
-  doctorId: '',
-  specialtyId: '',
-  date: '',
-  time: '',
-  status: 'Disponible',
-}
-
-function PacienteAgendaModule() {
-  const [items, setItems] = useState<Agenda[]>([])
-  const [medicos, setMedicos] = useState<Medico[]>([])
-  const [especialidades, setEspecialidades] = useState<Especialidad[]>([])
+function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
+  const [slots, setSlots] = useState<CupoDisponibleResponseApi[]>([])
+  const [medicos, setMedicos] = useState<MedicoResponseApi[]>([])
+  const [especialidad, setEspecialidad] = useState('')
+  const [medicoId, setMedicoId] = useState('')
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
   const [search, setSearch] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [mode, setMode] = useState<'create' | 'edit' | 'view'>('create')
-  const [selected, setSelected] = useState<Agenda | null>(null)
-  const [form, setForm] = useState<FormState>(emptyForm)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [toDelete, setToDelete] = useState<Agenda | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [selected, setSelected] = useState<CupoDisponibleResponseApi | null>(null)
+  const [motivo, setMotivo] = useState('')
+  const [booking, setBooking] = useState(false)
 
-  const loadData = useCallback(async () => {
-    const [agendaData, medData] = await Promise.all([
-      adminService.getAgenda(),
-      adminService.getMedicos(),
-    ])
-    setItems(agendaData)
-    setMedicos(medData)
-    setEspecialidades(adminService.getEspecialidades())
+  const loadSlots = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await cuposService.getDisponibles({
+        especialidad: especialidad || undefined,
+        id_medico: medicoId ? Number(medicoId) : undefined,
+        fecha_inicio: fechaInicio || undefined,
+        fecha_fin: fechaFin || undefined,
+      })
+      setSlots(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar los cupos disponibles.')
+      setSlots([])
+    } finally {
+      setLoading(false)
+    }
+  }, [especialidad, fechaFin, fechaInicio, medicoId])
+
+  useEffect(() => {
+    medicosService
+      .getAll()
+      .then(setMedicos)
+      .catch(() => setMedicos([]))
   }, [])
 
   useEffect(() => {
-    loadData().catch(() => {
-      setItems([])
-      setMedicos([])
-    })
-  }, [loadData])
+    loadSlots()
+  }, [loadSlots])
+
+  const especialidades = useMemo(
+    () =>
+      Array.from(new Set(medicos.map((medico) => medico.especialidad).filter(Boolean))).sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [medicos],
+  )
 
   const filtered = useMemo(() => {
-    const term = search.toLowerCase()
-    if (!term) return items
-    return items.filter((item) => {
-      const m = medicos.find((x) => x.id === item.doctorId)
-      const e = especialidades.find((x) => x.id === item.specialtyId)
-      return (
-        (m?.firstName.toLowerCase().includes(term) ||
-          m?.lastName.toLowerCase().includes(term) ||
-          e?.name.toLowerCase().includes(term) ||
-          item.date.toLowerCase().includes(term) ||
-          item.time.toLowerCase().includes(term) ||
-          item.status.toLowerCase().includes(term)) ??
-        false
-      )
-    })
-  }, [items, medicos, especialidades, search])
+    const term = search.trim().toLowerCase()
+    if (!term) return slots
 
-  const getMedico = (id: string) => {
-    const m = medicos.find((x) => x.id === id)
-    return m ? `${m.firstName} ${m.lastName}` : '-'
-  }
-  const getEsp = (id: string) => especialidades.find((x) => x.id === id)?.name ?? '-'
+    return slots.filter((slot) =>
+      [slot.medico, slot.especialidad, slot.consultorio, slot.fecha_cupo, slot.hora_cupo]
+        .join(' ')
+        .toLowerCase()
+        .includes(term),
+    )
+  }, [search, slots])
 
-  const openCreate = () => {
-    setMode('create')
-    setSelected(null)
-    setForm(emptyForm)
-    setModalOpen(true)
+  const openBooking = (slot: CupoDisponibleResponseApi) => {
+    setSelected(slot)
+    setMotivo('')
+    setSuccess(null)
   }
 
-  const openEdit = (item: Agenda) => {
-    setMode('edit')
-    setSelected(item)
-    setForm({ ...item })
-    setModalOpen(true)
-  }
-
-  const openView = (item: Agenda) => {
-    setMode('view')
-    setSelected(item)
-    setForm({ ...item })
-    setModalOpen(true)
-  }
-
-  const handleSubmit = async () => {
-    if (mode === 'view') {
-      setModalOpen(false)
+  const handleBook = async () => {
+    if (user.profileId === null) {
+      alert('No encontramos tu perfil de paciente. Cierra sesión e ingresa de nuevo.')
       return
     }
-    try {
-      if (mode === 'create') {
-        await adminService.addAgenda(form)
-        await loadData()
-        setModalOpen(false)
-        return
-      }
-      if (mode === 'edit' && selected) {
-        await adminService.updateAgenda(selected.id, form)
-        await loadData()
-        setModalOpen(false)
-      }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo guardar el espacio de agenda.')
-    }
-  }
 
-  const confirmDelete = (item: Agenda) => {
-    setToDelete(item)
-    setDeleteOpen(true)
-  }
+    if (!selected) return
 
-  const handleDelete = async () => {
-    if (!toDelete) return
+    setBooking(true)
+    setError(null)
     try {
-      await adminService.removeAgenda(toDelete.id)
-      await loadData()
-      setDeleteOpen(false)
-      setToDelete(null)
+      await citasService.create({
+        id_cupo: selected.id_cupo,
+        id_paciente: user.profileId,
+        motivo_consulta: motivo.trim() || null,
+      })
+      setSuccess(
+        `Cita agendada con ${selected.medico} el ${selected.fecha_cupo} a las ${selected.hora_cupo?.slice(0, 5)}.`,
+      )
+      setSelected(null)
+      setMotivo('')
+      await loadSlots()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo eliminar el espacio de agenda.')
+      alert(err instanceof Error ? err.message : 'No se pudo agendar la cita.')
+    } finally {
+      setBooking(false)
     }
   }
 
   return (
     <div className="space-y-4">
-      <AdminToolbar
-        title="Agenda"
-        searchValue={search}
-        onSearchChange={setSearch}
-        onCreate={openCreate}
-        createLabel="Crear agenda"
-      />
-      <AdminDataTable
-        columns={[
-          { header: 'Médico', render: (row: Agenda) => getMedico(row.doctorId) },
-          { header: 'Especialidad', render: (row: Agenda) => getEsp(row.specialtyId) },
-          { header: 'Fecha', accessor: 'date' },
-          { header: 'Hora', accessor: 'time' },
-          { header: 'Estado', accessor: 'status' },
-          {
-            header: 'Acciones',
-            render: (row: Agenda) => (
-              <div className="flex flex-wrap items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => openView(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Ver
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openEdit(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => confirmDelete(row)}
-                  className="inline-flex items-center gap-1 border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Eliminar
-                </button>
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900">Agendar cita</h2>
+        <p className="text-xs text-slate-500">
+          Elige un cupo disponible y reserva tu cita con el especialista.
+        </p>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        <select
+          value={especialidad}
+          onChange={(event) => setEspecialidad(event.target.value)}
+          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          aria-label="Filtrar por especialidad"
+        >
+          <option value="">Todas las especialidades</option>
+          {especialidades.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+        <select
+          value={medicoId}
+          onChange={(event) => setMedicoId(event.target.value)}
+          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          aria-label="Filtrar por médico"
+        >
+          <option value="">Todos los médicos</option>
+          {medicos.map((medico) => (
+            <option key={medico.id} value={medico.id}>
+              {medico.nombres} {medico.apellidos}
+            </option>
+          ))}
+        </select>
+        <input
+          type="date"
+          value={fechaInicio}
+          onChange={(event) => setFechaInicio(event.target.value)}
+          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          aria-label="Fecha inicial"
+        />
+        <input
+          type="date"
+          value={fechaFin}
+          onChange={(event) => setFechaFin(event.target.value)}
+          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          aria-label="Fecha final"
+        />
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            name="search"
+            aria-label="Buscar cupos"
+            autoComplete="off"
+            spellCheck={false}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar…"
+            className="w-full border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={loadSlots}
+          className="inline-flex items-center gap-2 border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          Actualizar
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="loading-banner animate-fade-in border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+          Buscando cupos disponibles…
+        </div>
+      ) : null}
+      {error ? (
+        <div className="animate-fade-up border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">{error}</div>
+      ) : null}
+      {success ? (
+        <div className="animate-fade-up border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700" role="status">
+          {success}
+        </div>
+      ) : null}
+
+      {filtered.length === 0 && !loading ? (
+        <div className="border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+          No hay cupos disponibles con los filtros seleccionados.
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((slot) => (
+            <article key={slot.id_cupo} className="border border-slate-200 bg-white p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {slot.fecha_cupo} · {slot.hora_cupo?.slice(0, 5)}
+                  </p>
+                  <p className="text-xs text-slate-500">{slot.especialidad}</p>
+                </div>
+                <span className="bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                  {slot.duracion_cita} min
+                </span>
               </div>
-            ),
-          },
-        ]}
-        data={filtered}
-        emptyMessage="No hay espacios de agenda registrados"
-      />
+              <dl className="mt-3 space-y-1 text-xs text-slate-600">
+                <div className="flex justify-between gap-2">
+                  <dt>Médico</dt>
+                  <dd className="text-right font-medium text-slate-800">{slot.medico}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt>Consultorio</dt>
+                  <dd className="text-right font-medium text-slate-800">{slot.consultorio}</dd>
+                </div>
+              </dl>
+              <button
+                type="button"
+                onClick={() => openBooking(slot)}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 bg-sky-800 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-sky-900"
+              >
+                <CalendarPlus className="h-4 w-4" aria-hidden="true" />
+                Agendar cita
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
 
       <AdminModal
-        open={modalOpen}
-        title={mode === 'create' ? 'Crear agenda' : mode === 'edit' ? 'Editar agenda' : 'Ver agenda'}
-        onClose={() => setModalOpen(false)}
+        open={selected !== null}
+        title="Confirmar cita"
+        onClose={() => setSelected(null)}
         footer={
           <>
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
-              className="inline-flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700"
+              onClick={() => setSelected(null)}
+              className="border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
             >
-              {mode === 'view' ? 'Cerrar' : 'Cancelar'}
+              Cancelar
             </button>
-            {mode !== 'view' ? (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="inline-flex items-center gap-2 bg-sky-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-sky-900"
-              >
-                Guardar
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={handleBook}
+              disabled={booking}
+              className="bg-sky-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-sky-900 disabled:opacity-60"
+            >
+              {booking ? 'Agendando...' : 'Confirmar cita'}
+            </button>
           </>
         }
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <AdminFormField
-            label="Médico"
-            id="doctorId"
-            required
-            disabled={mode === 'view'}
-            value={form.doctorId}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-              const doctorId = event.target.value
-              const m = medicos.find((x) => x.id === doctorId)
-              setForm((prev) => ({ ...prev, doctorId, specialtyId: m?.specialtyId ?? prev.specialtyId }))
-            }}
-          >
-            <option value="">Seleccionar</option>
-            {medicos.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.firstName} {m.lastName}
-              </option>
-            ))}
-          </AdminFormField>
-          <AdminFormField
-            label="Especialidad"
-            id="specialtyId"
-            required
-            disabled={mode === 'view'}
-            value={form.specialtyId}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) => setForm((prev) => ({ ...prev, specialtyId: event.target.value }))}
-          >
-            <option value="">Seleccionar</option>
-            {especialidades.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name}
-              </option>
-            ))}
-          </AdminFormField>
-          <AdminFormField
-            label="Fecha"
-            id="date"
-            type="date"
-            required
-            disabled={mode === 'view'}
-            value={form.date}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-          />
-          <AdminFormField
-            label="Hora"
-            id="time"
-            type="time"
-            required
-            disabled={mode === 'view'}
-            value={form.time}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, time: event.target.value }))}
-          />
-          <AdminFormField
-            label="Estado"
-            id="status"
-            required
-            disabled={mode === 'view'}
-            value={form.status}
-            onChange={(event: ChangeEvent<HTMLSelectElement>) => setForm((prev) => ({ ...prev, status: event.target.value as AgendaEstado }))}
-          >
-            {ESTADOS.map((estado) => (
-              <option key={estado} value={estado}>
-                {estado}
-              </option>
-            ))}
-          </AdminFormField>
-        </div>
+        {selected ? (
+          <div className="space-y-3">
+            <dl className="grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Médico</dt>
+                <dd className="text-slate-900">{selected.medico}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Especialidad</dt>
+                <dd className="text-slate-900">{selected.especialidad}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fecha y hora</dt>
+                <dd className="text-slate-900">
+                  {selected.fecha_cupo} {selected.hora_cupo?.slice(0, 5)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Consultorio</dt>
+                <dd className="text-slate-900">{selected.consultorio}</dd>
+              </div>
+            </dl>
+            <AdminFormField
+              label="Motivo de consulta"
+              id="motivo"
+              value={motivo}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setMotivo(event.target.value)}
+              placeholder="Describe brevemente el motivo (opcional)"
+            />
+          </div>
+        ) : null}
       </AdminModal>
-
-      <ConfirmDeleteModal
-        open={deleteOpen}
-        onCancel={() => setDeleteOpen(false)}
-        onConfirm={handleDelete}
-        description="¿Eliminar este espacio de agenda?"
-      />
     </div>
   )
 }

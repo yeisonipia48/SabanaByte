@@ -1,7 +1,14 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000'
+const rawBaseUrl =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000'
+
+const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '')
+
+const rawTimeout = Number(import.meta.env.VITE_API_TIMEOUT)
+const API_TIMEOUT_MS = Number.isFinite(rawTimeout) && rawTimeout > 0 ? rawTimeout : 20000
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
+  TIMEOUT_MS: API_TIMEOUT_MS,
   ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',

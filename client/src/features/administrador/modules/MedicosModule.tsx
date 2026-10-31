@@ -1,11 +1,20 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+} from 'react'
 import { Edit, Eye, Trash2 } from 'lucide-react'
 import AdminToolbar from '../components/AdminToolbar'
 import AdminDataTable from '../components/AdminDataTable'
 import AdminModal from '../components/AdminModal'
 import AdminFormField from '../components/AdminFormField'
+import AdminFeedback, { type AdminFeedbackType } from '../components/AdminFeedback'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { adminService } from '../services/adminService'
+import { friendlyErrorMessage } from '../../../lib/apiErrors'
 import type { DocumentType, Medico } from '../types/admin'
 
 const DOCUMENT_TYPES: DocumentType[] = ['CC', 'TI', 'CE', 'PA']
@@ -48,6 +57,11 @@ function MedicosModule() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Medico | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<{ type: AdminFeedbackType; message: string } | null>(null)
+  const deferredSearch = useDeferredValue(search)
 
   const loadMedicos = useCallback(async () => {
     setLoading(true)
@@ -66,8 +80,14 @@ function MedicosModule() {
     loadMedicos()
   }, [loadMedicos])
 
+  useEffect(() => {
+    if (feedback?.type !== 'success') return
+    const timeout = setTimeout(() => setFeedback(null), 4000)
+    return () => clearTimeout(timeout)
+  }, [feedback])
+
   const filtered = useMemo(() => {
-    const term = search.toLowerCase()
+    const term = deferredSearch.toLowerCase()
     if (!term) return items
     return items.filter((item) => {
       return (
@@ -78,7 +98,7 @@ function MedicosModule() {
         item.specialtyId.toLowerCase().includes(term)
       )
     })
-  }, [items, search])
+  }, [items, deferredSearch])
 
   const getSpecialtyName = (id: string) =>
     especialidades.find((e) => e.id === id)?.name ?? id
@@ -127,43 +147,91 @@ function MedicosModule() {
   }
 
   const handleSubmit = async () => {
-    if (mode === 'view') {
+    if (mode === 'view' || saving) {
       setModalOpen(false)
       return
     }
+
+    setSaving(true)
+    setFeedback(null)
+
     try {
       if (mode === 'create') {
-        await adminService.addMedico(form)
-        await loadMedicos()
+        const created = await adminService.addMedico(form)
+        setItems((previous) => [created, ...previous])
         setModalOpen(false)
+        setFeedback({ type: 'success', message: 'Médico creado correctamente.' })
         return
       }
+
       if (mode === 'edit' && selected) {
         const payload: Partial<Medico> = { ...form }
         if (!payload.password) delete payload.password
         await adminService.updateMedico(selected.id, payload)
-        await loadMedicos()
+        const updated: Medico = {
+          ...selected,
+          documentType: form.documentType,
+          documentNumber: form.documentNumber,
+          email: form.email,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          specialtyId: form.specialtyId,
+          phone: form.phone,
+          tarjetaProfesional: form.tarjetaProfesional,
+          consultorio: form.consultorio,
+        }
+        setItems((previous) =>
+          previous.map((item) => (item.id === selected.id ? updated : item)),
+        )
         setModalOpen(false)
+        setFeedback({ type: 'success', message: 'Médico actualizado correctamente.' })
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al guardar el médico en la base de datos')
+      setFeedback({
+        type: 'error',
+        message: friendlyErrorMessage(err, 'No pudimos guardar el médico. Intenta de nuevo.'),
+      })
+    } finally {
+      setSaving(false)
     }
   }
 
   const confirmDelete = (item: Medico) => {
+    setDeleteError(null)
     setToDelete(item)
     setDeleteOpen(true)
   }
 
+  const closeDelete = () => {
+    if (deleting) return
+    setDeleteOpen(false)
+    setToDelete(null)
+    setDeleteError(null)
+  }
+
   const handleDelete = async () => {
-    if (!toDelete) return
+    if (!toDelete || deleting) return
+
+    const target = toDelete
+    setDeleting(true)
+    setDeleteError(null)
+    setItems((previous) => previous.filter((item) => item.id !== target.id))
+
     try {
-      await adminService.removeMedico(toDelete.id)
-      await loadMedicos()
+      await adminService.removeMedico(target.id)
       setDeleteOpen(false)
       setToDelete(null)
+      setFeedback({
+        type: 'success',
+        message: `Médico ${target.firstName} ${target.lastName} eliminado.`,
+      })
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al eliminar el médico de la base de datos')
+      setItems((previous) => [target, ...previous])
+      setDeleteError(
+        friendlyErrorMessage(err, 'No pudimos eliminar el médico. Intenta de nuevo.'),
+      )
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -177,16 +245,25 @@ function MedicosModule() {
         createLabel="Crear médico"
       />
       {loading && (
-        <div className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
-          Cargando médicos desde la base de datos...
+        <div className="loading-banner animate-fade-in rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+          Cargando médicos desde la base de datos…
         </div>
       )}
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="animate-fade-up rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
           {error}
         </div>
       )}
+      {feedback ? (
+        <AdminFeedback
+          type={feedback.type}
+          message={feedback.message}
+          onDismiss={() => setFeedback(null)}
+        />
+      ) : null}
       <AdminDataTable
+        loading={loading}
+        getRowKey={(row) => row.id}
         columns={[
           {
             header: 'Documento',
@@ -209,25 +286,25 @@ function MedicosModule() {
                 <button
                   type="button"
                   onClick={() => openView(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 transition-colors hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
-                  <Eye className="h-3 w-3" />
+                  <Eye className="h-3 w-3" aria-hidden="true" />
                   Ver
                 </button>
                 <button
                   type="button"
                   onClick={() => openEdit(row)}
-                  className="inline-flex items-center gap-1 border border-sky-300 px-2 py-1 text-xs text-sky-700 hover:bg-sky-50"
+                  className="inline-flex items-center gap-1 border border-sky-300 px-2 py-1 text-xs text-sky-700 transition-colors hover:bg-sky-50 active:bg-sky-100 dark:border-sky-900/60 dark:text-sky-300 dark:hover:bg-sky-950/40"
                 >
-                  <Edit className="h-3 w-3" />
+                  <Edit className="h-3 w-3" aria-hidden="true" />
                   Editar
                 </button>
                 <button
                   type="button"
                   onClick={() => confirmDelete(row)}
-                  className="inline-flex items-center gap-1 border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                  className="inline-flex items-center gap-1 border border-rose-300 px-2 py-1 text-xs text-rose-700 transition-colors hover:bg-rose-50 active:bg-rose-100 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/40"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
                   Eliminar
                 </button>
               </div>
@@ -372,10 +449,12 @@ function MedicosModule() {
 
       <ConfirmDeleteModal
         open={deleteOpen}
-        onCancel={() => setDeleteOpen(false)}
+        onCancel={closeDelete}
         onConfirm={handleDelete}
         title="Eliminar médico"
         description={`¿Estás seguro de que deseas eliminar al médico ${toDelete ? `${toDelete.firstName} ${toDelete.lastName}` : ''}?`}
+        error={deleteError}
+        loading={deleting}
       />
     </div>
   )

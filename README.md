@@ -13,7 +13,10 @@ Roles por defecto: `1 = admin`, `2 = paciente`, `3 = medico`. `is_active` se alm
 
 ## Convenciones y errores
 
-- Fechas: `YYYY-MM-DD`; horas: `HH:MM:SS`; fecha-hora: ISO 8601.
+- Fechas: `YYYY-MM-DD`.
+- Horas de salida: formato de 12 horas, `hh:mm AM/PM` (por ejemplo, `08:30 AM`).
+- Fecha-hora de salida: `YYYY-MM-DD hh:mm AM/PM`.
+- Horas de entrada: aceptan `hh:mm AM/PM` o ISO 8601 `HH:MM:SS`.
 - Errores de negocio: `{"detail": "mensaje"}`.
 - Validación Pydantic: `422` con el formato estándar de FastAPI.
 - Error no controlado: `500` con `{"detail": "Error interno del servidor"}`.
@@ -165,7 +168,7 @@ GET /cupos/disponibles?especialidad=Cardiología&fecha_inicio=2026-03-02&fecha_f
   {
     "id_cupo": 301,
     "fecha_cupo": "2026-03-02",
-    "hora_cupo": "08:30:00",
+    "hora_cupo": "08:30 AM",
     "duracion_cita": 30,
     "id_medico": 9,
     "medico": "Rodríguez Peña Carlos Andrés",
@@ -194,8 +197,8 @@ Content-Type: application/json
   "id_paciente": 12,
   "motivo_consulta": "Dolor en el pecho al hacer ejercicio",
   "estado": "pendiente",
-  "created_at": "2026-02-25T14:30:00",
-  "updated_at": "2026-02-25T14:30:00"
+  "created_at": "2026-02-25 02:30 PM",
+  "updated_at": "2026-02-25 02:30 PM"
 }
 ```
 
@@ -218,11 +221,11 @@ Si hay cupo compatible queda `ofrecida`; si no, queda `pendiente`.
   "id_medico": 9,
   "prioridad": 0,
   "id_cupo_ofrecido": 301,
-  "fecha_solicitud": "2026-02-25T15:00:00",
-  "fecha_oferta": "2026-02-25T15:00:01",
-  "fecha_expiracion": "2026-02-27T15:00:01",
+  "fecha_solicitud": "2026-02-25 03:00 PM",
+  "fecha_oferta": "2026-02-25 03:00 PM",
+  "fecha_expiracion": "2026-02-27 03:00 PM",
   "estado": "ofrecida",
-  "created_at": "2026-02-25T15:00:00"
+  "created_at": "2026-02-25 03:00 PM"
 }
 ```
 
@@ -250,8 +253,8 @@ PATCH /citas/88/cancelar
     "id_medico": 9,
     "medico": "Rodríguez Peña Carlos Andrés",
     "fecha_cupo": "2026-03-02",
-    "hora_cupo": "08:30:00",
-    "fecha_expiracion": "2026-02-28T09:00:00"
+    "hora_cupo": "08:30 AM",
+    "fecha_expiracion": "2026-02-28 09:00 AM"
   }
 }
 ```

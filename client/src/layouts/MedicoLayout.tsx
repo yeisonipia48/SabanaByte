@@ -4,7 +4,7 @@ import type { AuthUser } from '../features/auth/types'
 import BrandLogo from '../features/auth/components/BrandLogo'
 import ThemeToggle from '../components/ThemeToggle'
 
-export type MedicoModuleKey = 'inicio' | 'citas' | 'agenda' | 'lista-espera' | 'pacientes' | 'perfil'
+export type MedicoModuleKey = 'jornada' | 'citas' | 'agenda' | 'perfil'
 
 interface NavItem {
   key: MedicoModuleKey
@@ -50,6 +50,22 @@ function MedicoLayout({
     }
   }, [collapsed])
 
+  useEffect(() => {
+    if (!mobileOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [mobileOpen])
+
   const toggleCollapsed = () => setCollapsed((value) => !value)
 
   const initials =
@@ -69,7 +85,7 @@ function MedicoLayout({
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="inline-flex items-center justify-center border border-slate-300 p-1.5 text-slate-600 lg:hidden dark:border-slate-700 dark:text-slate-300"
+              className="inline-flex items-center justify-center border border-slate-300 p-1.5 text-slate-600 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 lg:hidden dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               aria-label="Abrir menú"
             >
               <Menu className="h-4 w-4" aria-hidden="true" />
@@ -124,12 +140,13 @@ function MedicoLayout({
                   key={item.key}
                   type="button"
                   onClick={() => onModuleChange(item.key)}
-                  className={`group relative flex items-center gap-2 px-2 py-2 text-left text-sm transition-colors ${isActive
+                  className={`group relative flex items-center gap-2 px-2 py-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-700 ${isActive
                       ? 'border-l-4 border-sky-700 bg-sky-50 font-semibold text-sky-900 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-200'
                       : 'border-l-4 border-transparent text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
                     } ${collapsed ? 'justify-center px-0' : 'pl-3 pr-2'}`}
                   title={collapsed ? item.label : undefined}
                   aria-label={item.label}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <span className="flex h-8 w-8 items-center justify-center text-slate-600 group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-100">
                     {item.icon}
@@ -149,7 +166,7 @@ function MedicoLayout({
                 />
                 <div
                   role="menu"
-                  className="absolute bottom-full left-2 z-50 mb-1 w-48 border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                  className="animate-fade-up absolute bottom-full left-2 z-50 mb-1 w-48 border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
                 >
                   <button
                     type="button"
@@ -200,13 +217,13 @@ function MedicoLayout({
         </aside>
 
         {mobileOpen ? (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="animate-fade-in fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú de navegación">
             <div
               className="absolute inset-0 bg-slate-900/40"
               aria-hidden="true"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="relative flex h-full w-72 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <aside className="animate-slide-in-left relative flex h-full w-72 flex-col overscroll-contain border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-slate-800">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   Menú
@@ -214,7 +231,7 @@ function MedicoLayout({
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
-                  className="inline-flex items-center justify-center border border-slate-300 p-1.5 text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                  className="inline-flex items-center justify-center border border-slate-300 p-1.5 text-slate-600 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   aria-label="Cerrar menú"
                 >
                   <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
@@ -231,7 +248,8 @@ function MedicoLayout({
                         onModuleChange(item.key)
                         setMobileOpen(false)
                       }}
-                      className={`flex items-center gap-2 border-l-4 px-3 py-2 text-left text-sm ${isActive
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex items-center gap-2 border-l-4 px-3 py-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-700 ${isActive
                           ? 'border-sky-700 bg-sky-50 font-semibold text-sky-900 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-200'
                           : 'border-transparent text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800'
                         }`}
@@ -254,7 +272,7 @@ function MedicoLayout({
                     />
                     <div
                       role="menu"
-                      className="absolute bottom-full left-2 z-50 mb-1 w-48 border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                      className="animate-fade-up absolute bottom-full left-2 z-50 mb-1 w-48 border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
                     >
                       <button
                         type="button"
@@ -307,8 +325,10 @@ function MedicoLayout({
         ) : null}
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
-            {children}
+          <div className="scroll-stable min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
+            <div key={activeModule} className="animate-fade-up">
+              {children}
+            </div>
           </div>
         </main>
       </div>

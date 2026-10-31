@@ -53,11 +53,18 @@ services:
         failure_action: rollback
     ports:
       - 6432:6432
+    secrets:
+      - postgres_user
+      - postgres_password
+    command:
+      - sh
+      - -c
+      - |
+        printf '"%s" "%s"\n' "$$(cat /run/secrets/postgres_user)" "$$(cat /run/secrets/postgres_password)" > /etc/pgbouncer/userlist.txt
+        exec /entrypoint.sh /usr/bin/pgbouncer /etc/pgbouncer/pgbouncer.ini
     configs: # Los archivos se distribuyen nativamente en el clúster
       - source: pgbouncer_config
         target: /etc/pgbouncer/pgbouncer.ini
-      - source: userlist_config
-        target: /etc/pgbouncer/userlist.txt
     
   
   api:
@@ -84,9 +91,7 @@ services:
 # DEFINICIÓN DE CONFIGURACIONES (Mapea los archivos locales para que Docker los maneje)
 configs:
   pgbouncer_config:
-    file: ./pgbouncer.ini
-  userlist_config:
-    file: ./userlist.txt
+    file: apiClinica/pgbouncer.ini
 
 volumes:
   postgres_app_citas:
@@ -107,4 +112,6 @@ secrets:
 networks:
   net_api:
     driver: overlay
-   
+    ipam:
+      config:
+        - subnet: 10.20.30.0/28

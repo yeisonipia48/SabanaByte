@@ -7,13 +7,18 @@ import AdminFormField from '../components/AdminFormField'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { adminService } from '../services/adminService'
 import type { DocumentType, UsuarioAdmin } from '../types/admin'
+import type { RolApi } from '../../../types/api/auth'
+import { normalizeRole } from '../../../types/api/auth'
 
 const DOCUMENT_TYPES: DocumentType[] = ['CC', 'TI', 'CE', 'PA']
-const ROLES = [
-  { id: 1, name: 'administrador', label: 'Administrador' },
-  { id: 2, name: 'medico', label: 'Médico' },
-  { id: 3, name: 'paciente', label: 'Paciente' },
-]
+
+function roleIdFor(roleName: string, roles: RolApi[]): number {
+  return (
+    roles.find(
+      (candidate) => normalizeRole(candidate.rol) === normalizeRole(roleName),
+    )?.id ?? roles[0]?.id ?? 0
+  )
+}
 
 interface FormState {
   idRol: number
@@ -25,7 +30,7 @@ interface FormState {
 }
 
 const emptyForm: FormState = {
-  idRol: 3,
+  idRol: 0,
   documentType: 'CC',
   documentNumber: '',
   email: '',
@@ -35,6 +40,7 @@ const emptyForm: FormState = {
 
 function UsuariosModule() {
   const [items, setItems] = useState<UsuarioAdmin[]>([])
+  const [roles, setRoles] = useState<RolApi[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -49,8 +55,12 @@ function UsuariosModule() {
     setLoading(true)
     setError(null)
     try {
-      const data = await adminService.getUsuarios()
+      const [data, roleData] = await Promise.all([
+        adminService.getUsuarios(),
+        adminService.getRoles(),
+      ])
       setItems(data)
+      setRoles(roleData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar usuarios de la base de datos')
     } finally {
@@ -77,16 +87,18 @@ function UsuariosModule() {
   const openCreate = () => {
     setMode('create')
     setSelected(null)
-    setForm(emptyForm)
+    setForm({
+      ...emptyForm,
+      idRol: roleIdFor('paciente', roles),
+    })
     setModalOpen(true)
   }
 
   const openEdit = (item: UsuarioAdmin) => {
     setMode('edit')
     setSelected(item)
-    const matchingRol = ROLES.find((r) => r.name.toLowerCase() === item.rol.toLowerCase())
     setForm({
-      idRol: matchingRol ? matchingRol.id : 3,
+      idRol: roleIdFor(item.rol, roles),
       documentType: item.documentType,
       documentNumber: item.documentNumber,
       email: item.email,
@@ -99,9 +111,8 @@ function UsuariosModule() {
   const openView = (item: UsuarioAdmin) => {
     setMode('view')
     setSelected(item)
-    const matchingRol = ROLES.find((r) => r.name.toLowerCase() === item.rol.toLowerCase())
     setForm({
-      idRol: matchingRol ? matchingRol.id : 3,
+      idRol: roleIdFor(item.rol, roles),
       documentType: item.documentType,
       documentNumber: item.documentNumber,
       email: item.email,
@@ -124,6 +135,14 @@ function UsuariosModule() {
         }
         if (!form.email.trim()) {
           alert('Ingresa el correo electrónico.')
+          return
+        }
+        if (form.idRol <= 0) {
+          alert('Selecciona un rol válido.')
+          return
+        }
+        if (!form.password.trim()) {
+          alert('Ingresa una contraseña.')
           return
         }
         await adminService.addUsuario({
@@ -178,16 +197,17 @@ function UsuariosModule() {
         createLabel="Crear usuario"
       />
       {loading && (
-        <div className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
-          Cargando usuarios desde la base de datos...
+        <div className="loading-banner animate-fade-in rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+          Cargando usuarios desde la base de datos…
         </div>
       )}
       {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="animate-fade-up rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
           {error}
         </div>
       )}
       <AdminDataTable
+        loading={loading}
         columns={[
           {
             header: 'Documento',
@@ -343,9 +363,9 @@ function UsuariosModule() {
               setForm((prev) => ({ ...prev, idRol: Number(event.target.value) }))
             }
           >
-            {ROLES.map((r) => (
+            {roles.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.label}
+                {r.rol}
               </option>
             ))}
           </AdminFormField>

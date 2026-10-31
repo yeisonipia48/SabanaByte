@@ -37,7 +37,7 @@ password = _leer_secreto("postgres_password")
 host = _leer_secreto("postgres_host")
 db = _leer_secreto("postgres_db")
 
-url_db = f'postgresql+asyncpg://{db_user}:{password}@{host}:5432/{db}'
+url_db = f'postgresql+asyncpg://{db_user}:{password}@{host}:6432/{db}'
 
 if url_db:
     config.set_main_option("sqlalchemy.url", url_db)

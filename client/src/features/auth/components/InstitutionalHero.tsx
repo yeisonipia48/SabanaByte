@@ -12,6 +12,11 @@ function InstitutionalHero({ className }: { className?: string }) {
         alt="Atención médica profesional y humana"
         className="absolute inset-0 z-0 h-full w-full object-cover object-center"
         src={epsHero}
+        width={512}
+        height={279}
+        loading="eager"
+        decoding="async"
+        fetchPriority="high"
       />
       <div className="absolute inset-0 z-10 custom-gradient-overlay" />
       <div className="relative z-20">

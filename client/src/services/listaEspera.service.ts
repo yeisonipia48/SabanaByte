@@ -9,26 +9,16 @@ import type {
   ProcesarExpiradasResponseApi,
 } from '../types/api/listaEspera'
 
-function buildQueryString(params?: Record<string, unknown>): string {
-  if (!params) return ''
-  const searchParams = new URLSearchParams()
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      searchParams.append(key, String(value))
-    }
-  }
-  const qs = searchParams.toString()
-  return qs ? `?${qs}` : ''
-}
-
 export const listaEsperaService = {
   async create(data: ListaEsperaCreateApiRequest): Promise<ListaEsperaResponseApi> {
     return httpClient.post<ListaEsperaResponseApi>(API_CONFIG.ENDPOINTS.LISTA_ESPERA.BASE, data)
   },
 
   async getAll(params?: ListaEsperaQuery): Promise<ListaEsperaDetalleResponseApi[]> {
-    const qs = buildQueryString(params as Record<string, unknown>)
-    return httpClient.get<ListaEsperaDetalleResponseApi[]>(`${API_CONFIG.ENDPOINTS.LISTA_ESPERA.BASE}${qs}`)
+    return httpClient.get<ListaEsperaDetalleResponseApi[]>(
+      API_CONFIG.ENDPOINTS.LISTA_ESPERA.BASE,
+      { query: params as Record<string, unknown> | undefined },
+    )
   },
 
   async getById(idEntrada: number): Promise<ListaEsperaDetalleResponseApi> {

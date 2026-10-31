@@ -2,7 +2,6 @@ export type Role = 'Paciente' | 'Medico' | 'Administrador'
 
 export interface LoginPayload {
   username?: string
-  documentType?: string
   documentNumber: string
   password: string
   remember: boolean
@@ -11,15 +10,19 @@ export interface LoginPayload {
 export interface RegisterPayload {
   documentType: string
   documentNumber: string
-  fullName: string
+  nombres: string
+  apellidos: string
   email: string
+  birthDate: string
+  phone: string
+  address?: string
   password: string
-  confirmPassword: string
   remember: boolean
 }
 
 export interface AuthUser {
   id: string
+  profileId: number | null
   fullName: string
   documentType: string
   documentNumber: string

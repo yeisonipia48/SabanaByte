@@ -8,22 +8,12 @@ import type {
   CupoUpdateApiRequest,
 } from '../types/api/cupos'
 
-function buildQueryString(params?: Record<string, unknown>): string {
-  if (!params) return ''
-  const searchParams = new URLSearchParams()
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      searchParams.append(key, String(value))
-    }
-  }
-  const qs = searchParams.toString()
-  return qs ? `?${qs}` : ''
-}
-
 export const cuposService = {
   async getDisponibles(params?: CuposDisponiblesQuery): Promise<CupoDisponibleResponseApi[]> {
-    const qs = buildQueryString(params as Record<string, unknown>)
-    return httpClient.get<CupoDisponibleResponseApi[]>(`${API_CONFIG.ENDPOINTS.CUPOS.DISPONIBLES}${qs}`)
+    return httpClient.get<CupoDisponibleResponseApi[]>(
+      API_CONFIG.ENDPOINTS.CUPOS.DISPONIBLES,
+      { query: params as Record<string, unknown> | undefined },
+    )
   },
 
   async getById(idCupo: number): Promise<CupoDetalleResponseApi> {

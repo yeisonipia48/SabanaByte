@@ -49,11 +49,11 @@ function PerfilModule({ user, onUserUpdate }: PerfilModuleProps) {
     setLoading(true)
     setError(null)
     try {
-      const usuarios = await usuariosService.getAll()
+      const numericId = Number(user.id)
       const u =
-        usuarios.find((x) => String(x.id) === user.id) ??
-        usuarios.find((x) => x.numero_documento === user.documentNumber) ??
-        null
+        Number.isFinite(numericId) && numericId > 0
+          ? await usuariosService.getById(numericId).catch(() => null)
+          : null
       setUsuario(u)
 
       const nextForm: PerfilFormState = {
@@ -64,10 +64,13 @@ function PerfilModule({ user, onUserUpdate }: PerfilModuleProps) {
       }
 
       if (user.role === 'Paciente') {
-        const pacientes = await pacientesService.getAll()
         const p =
-          pacientes.find((x) => String(x.id_usuario) === user.id) ??
-          pacientes.find((x) => x.numero_documento === user.documentNumber) ??
+          (user.profileId !== null
+            ? await pacientesService.getById(user.profileId).catch(() => null)
+            : null) ??
+          (await pacientesService.getAll()).find(
+            (x) => String(x.id_usuario) === user.id,
+          ) ??
           null
         if (p) {
           setPerfilId(p.id)
@@ -80,10 +83,13 @@ function PerfilModule({ user, onUserUpdate }: PerfilModuleProps) {
           setPerfilId(null)
         }
       } else if (user.role === 'Medico') {
-        const medicos = await medicosService.getAll()
         const m =
-          medicos.find((x) => String(x.id_usuario) === user.id) ??
-          medicos.find((x) => x.numero_documento === user.documentNumber) ??
+          (user.profileId !== null
+            ? await medicosService.getById(user.profileId).catch(() => null)
+            : null) ??
+          (await medicosService.getAll()).find(
+            (x) => String(x.id_usuario) === user.id,
+          ) ??
           null
         if (m) {
           setPerfilId(m.id)
@@ -223,7 +229,7 @@ function PerfilModule({ user, onUserUpdate }: PerfilModuleProps) {
         </h2>
 
         {loading ? (
-          <p className="mt-3 text-sm text-slate-500">Cargando información...</p>
+          <p className="animate-fade-in mt-3 text-sm text-slate-500" role="status" aria-live="polite">Cargando información…</p>
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <AdminFormField
