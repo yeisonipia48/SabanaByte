@@ -43,6 +43,17 @@ function PacienteLayout({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
   useEffect(() => {
+    if (!profileMenuOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileMenuOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [profileMenuOpen])
+
+  useEffect(() => {
     try {
       localStorage.setItem(SIDEBAR_KEY, collapsed ? 'true' : 'false')
     } catch {
@@ -79,6 +90,12 @@ function PacienteLayout({
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-200">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:border focus:border-sky-700 focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-sky-900 dark:focus:bg-slate-900 dark:focus:text-sky-200"
+      >
+        Saltar al contenido
+      </a>
       <header className="shrink-0 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-2 px-3 py-2 sm:px-4">
           <div className="flex items-center gap-2">
@@ -132,7 +149,7 @@ function PacienteLayout({
               )}
             </button>
           </div>
-          <nav className="flex flex-1 flex-col py-1">
+          <nav aria-label="Navegación principal" className="flex flex-1 flex-col py-1">
             {navItems.map((item) => {
               const isActive = activeModule === item.key
               return (
@@ -200,7 +217,7 @@ function PacienteLayout({
               onClick={() => setProfileMenuOpen((value) => !value)}
               aria-haspopup="menu"
               aria-expanded={profileMenuOpen}
-              className={`flex w-full items-center gap-2 rounded-[50px] border px-2 py-1.5 text-left text-sm transition-colors ${
+              className={`flex w-full items-center gap-2 border px-2 py-1.5 text-left text-sm transition-colors ${
                 activeModule === 'perfil'
                   ? 'border-sky-700 bg-sky-50 font-semibold text-sky-900 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-200'
                   : 'border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -208,7 +225,7 @@ function PacienteLayout({
               title={collapsed ? 'Mi perfil' : undefined}
               aria-label="Mi perfil"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-700 text-xs font-semibold text-white">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-sky-700 text-xs font-semibold text-white">
                 {initials}
               </span>
               {!collapsed ? <span className="truncate">Mi perfil</span> : null}
@@ -237,7 +254,7 @@ function PacienteLayout({
                   <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
-              <nav className="flex flex-1 flex-col py-1">
+              <nav aria-label="Navegación principal" className="flex flex-1 flex-col py-1">
                 {navItems.map((item) => {
                   const isActive = activeModule === item.key
                   return (
@@ -307,14 +324,14 @@ function PacienteLayout({
                   onClick={() => setProfileMenuOpen((value) => !value)}
                   aria-haspopup="menu"
                   aria-expanded={profileMenuOpen}
-                  className={`flex w-full items-center gap-2 rounded-[50px] border px-3 py-1.5 text-left text-sm transition-colors ${
+                  className={`flex w-full items-center gap-2 border px-3 py-1.5 text-left text-sm transition-colors ${
                     activeModule === 'perfil'
                       ? 'border-sky-700 bg-sky-50 font-semibold text-sky-900 dark:border-sky-500 dark:bg-sky-950/40 dark:text-sky-200'
                       : 'border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
                   }`}
                   aria-label="Mi perfil"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-700 text-xs font-semibold text-white">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-sky-700 text-xs font-semibold text-white">
                     {initials}
                   </span>
                   <span className="truncate">Mi perfil</span>
@@ -324,8 +341,12 @@ function PacienteLayout({
           </div>
         ) : null}
 
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-sky-700"
+        >
+          <div className="scroll-stable min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
 
             {children}
 

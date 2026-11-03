@@ -1,5 +1,6 @@
 import { API_CONFIG } from '../config/api'
 import { friendlyErrorFromResponse } from './apiErrors'
+import { getAuthToken } from './authToken'
 
 export class HttpError extends Error {
   status: number
@@ -57,6 +58,11 @@ async function request<T>(
 
   if (body !== undefined) {
     finalHeaders['Content-Type'] = 'application/json'
+  }
+
+  const token = getAuthToken()
+  if (token && !finalHeaders.Authorization) {
+    finalHeaders.Authorization = `Bearer ${token}`
   }
 
   const controller = new AbortController()

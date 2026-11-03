@@ -1,12 +1,11 @@
 import type { AuthUser, LoginPayload, LoginResult, RegisterPayload, RegisterResult } from './types'
 import { API_CONFIG } from '../../config/api'
 import { httpClient } from '../../lib/httpClient'
+import { clearAuthToken, setAuthToken } from '../../lib/authToken'
 import { friendlyErrorMessage } from '../../lib/apiErrors'
-import type { RegistroUsuarioApiRequest, RolApi } from '../../types/api/auth'
-import { normalizeRole } from '../../types/api/auth'
+import type { RegistroUsuarioApiRequest } from '../../types/api/auth'
 import {
   attemptLogin,
-  createUsernameFromFullName,
   isProfileKind,
   loadProfile,
   refreshUser,
@@ -22,16 +21,13 @@ export interface SessionData {
   expiresAt: number
 }
 
-function createToken(role: string): string {
-  return `sb-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
-
 export function saveSession(user: AuthUser, token: string, remember = false): SessionData {
   const expiresAt = remember
     ? Date.now() + 1000 * 60 * 60 * 24 * 7
     : Date.now() + 1000 * 60 * 60 * 8
 
   const session: SessionData = { user, token, expiresAt }
+  setAuthToken(token)
 
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session))
@@ -54,6 +50,7 @@ export function getSession(): SessionData | null {
       return null
     }
 
+    setAuthToken(parsed.token)
     return parsed
   } catch {
     return null
@@ -61,6 +58,8 @@ export function getSession(): SessionData | null {
 }
 
 export function clearSession(): void {
+  clearAuthToken()
+
   try {
     localStorage.removeItem(SESSION_KEY)
   } catch {
@@ -139,7 +138,7 @@ export async function login(payload: LoginPayload): Promise<LoginResult> {
 
   const attempt = await attemptLogin(documentNumber, password)
 
-  if (!attempt.ok || !attempt.user) {
+  if (!attempt.ok || !attempt.user || !attempt.token) {
     return {
       ok: false,
       message:
@@ -153,13 +152,12 @@ export async function login(payload: LoginPayload): Promise<LoginResult> {
     ? await loadProfile(attempt.user, kind)
     : null
   const authUser = toAuthUser(attempt.user, profile, payload.username)
-  const token = createToken(authUser.role)
 
   return {
     ok: true,
     message: `Bienvenido(a) ${authUser.fullName}. Acceso correcto.`,
     user: authUser,
-    token,
+    token: attempt.token,
   }
 }
 
@@ -207,21 +205,7 @@ export async function register(payload: RegisterPayload): Promise<RegisterResult
   }
 
   try {
-    const roles = await httpClient.get<RolApi[]>(API_CONFIG.ENDPOINTS.ROLES.BASE)
-    const pacienteRole = roles.find(
-      (candidate) => normalizeRole(candidate.rol) === 'paciente',
-    )
-
-    if (!pacienteRole) {
-      return {
-        ok: false,
-        message:
-          'El registro en línea no está disponible en este momento. Comunícate con la clínica.',
-      }
-    }
-
     const registerRequest: RegistroUsuarioApiRequest = {
-      id_rol: pacienteRole.id,
       tipo_documento: documentType,
       numero_documento: documentNumber,
       email,
@@ -242,7 +226,7 @@ export async function register(payload: RegisterPayload): Promise<RegisterResult
       remember: payload.remember,
     })
 
-    if (loginResult.ok && loginResult.user) {
+    if (loginResult.ok && loginResult.user && loginResult.token) {
       return {
         ok: true,
         message: `Registro exitoso. Bienvenido(a) ${loginResult.user.fullName}. Tu cuenta ha sido creada como Paciente.`,
@@ -251,25 +235,9 @@ export async function register(payload: RegisterPayload): Promise<RegisterResult
       }
     }
 
-    // Fallback if auto-login fails
-    const authUser: AuthUser = {
-      id: documentNumber,
-      profileId: null,
-      fullName,
-      documentType,
-      documentNumber,
-      email,
-      role: 'Paciente',
-      username: createUsernameFromFullName(fullName),
-    }
-
-    const token = createToken('Paciente')
-
     return {
-      ok: true,
-      message: `Registro exitoso. Bienvenido(a) ${fullName}. Tu cuenta ha sido creada como Paciente.`,
-      user: authUser,
-      token,
+      ok: false,
+      message: `Tu cuenta fue creada, ${fullName}, pero no pudimos iniciar sesión automáticamente. Ingresa con tu documento y contraseña.`,
     }
   } catch (error) {
     return {

@@ -1,4 +1,10 @@
+import asyncio
+import logging
 import os
+import smtplib
+import unicodedata
+from contextlib import asynccontextmanager
+from email.message import EmailMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 from functools import lru_cache
@@ -24,6 +30,177 @@ from typing import Any, AsyncGenerator, List
 from Security.security import hash_password, verify_password
 
 HORAS_CONFIRMACION_OFERTA = 48
+
+logger = logging.getLogger("apiClinica")
+
+
+@asynccontextmanager
+async def _transaccion(session: AsyncSession):
+    """Abre una transacción o reutiliza la que ya inició la sesión.
+
+    La sesión de FastAPI puede haber iniciado una transacción implícita al
+    autenticar al usuario o al consultar datos antes de la operación. En ese
+    caso no se puede llamar a ``session.begin()`` de nuevo; se confirma o
+    revierte la transacción existente para conservar la atomicidad.
+    """
+    if session.in_transaction():
+        try:
+            yield
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+    else:
+        async with session.begin():
+            yield
+
+
+def _normalizar_rol(valor: str) -> str:
+    texto = unicodedata.normalize("NFD", (valor or "").strip().lower())
+    limpio = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    sinonimos = {
+        "admin": "administrador",
+        "administrador": "administrador",
+        "medico": "medico",
+        "doctor": "medico",
+        "paciente": "paciente",
+    }
+    return sinonimos.get(limpio, limpio)
+
+
+def _leer_secreto_opcional(nombre: str) -> str | None:
+    ruta = f"/run/secrets/{nombre}"
+    if os.path.exists(ruta):
+        with open(ruta) as f:
+            return f.read().strip()
+    valor = os.getenv(nombre)
+    return valor.strip() if valor else None
+
+
+def _crear_notificacion(
+    session: AsyncSession,
+    *,
+    id_paciente: int,
+    asunto: str,
+    mensaje: str,
+    tipo: str,
+    id_lista_espera: int | None = None,
+    email: str | None = None,
+) -> None:
+    session.add(
+        models.Notificaciones(
+            id_paciente=id_paciente,
+            id_lista_espera=id_lista_espera,
+            tipo=tipo,
+            canal="app",
+            destinatario=None,
+            asunto=asunto,
+            mensaje=mensaje,
+            estado="entregada",
+            fecha_envio=datetime.now(),
+            leida=False,
+        )
+    )
+    if email:
+        session.add(
+            models.Notificaciones(
+                id_paciente=id_paciente,
+                id_lista_espera=id_lista_espera,
+                tipo=tipo,
+                canal="email",
+                destinatario=email,
+                asunto=asunto,
+                mensaje=mensaje,
+                estado="pendiente",
+                leida=True,
+            )
+        )
+
+
+def _smtp_configurado() -> bool:
+    return bool(_leer_secreto_opcional("smtp_host"))
+
+
+def _enviar_correo(destinatario: str, asunto: str, mensaje: str) -> bool:
+    host = _leer_secreto_opcional("smtp_host")
+    if not host:
+        return False
+
+    puerto = int(_leer_secreto_opcional("smtp_port") or "587")
+    usuario = _leer_secreto_opcional("smtp_user")
+    password = _leer_secreto_opcional("smtp_password")
+    remitente = _leer_secreto_opcional("smtp_from") or usuario or "no-reply@ips.local"
+    usar_tls = (_leer_secreto_opcional("smtp_tls") or "true").lower() != "false"
+
+    msg = EmailMessage()
+    msg["Subject"] = asunto
+    msg["From"] = remitente
+    msg["To"] = destinatario
+    msg.set_content(mensaje)
+
+    try:
+        with smtplib.SMTP(host, puerto, timeout=10) as smtp:
+            if usar_tls:
+                smtp.starttls()
+            if usuario and password:
+                smtp.login(usuario, password)
+            smtp.send_message(msg)
+        return True
+    except Exception:
+        logger.exception("No fue posible enviar el correo de notificación")
+        return False
+
+
+async def _enviar_notificaciones_pendientes(session: AsyncSession) -> None:
+    if not _smtp_configurado():
+        return
+
+    pendientes = (
+        await session.scalars(
+            select(models.Notificaciones)
+            .where(
+                models.Notificaciones.canal == "email",
+                models.Notificaciones.estado == "pendiente",
+                models.Notificaciones.destinatario.is_not(None),
+            )
+            .order_by(models.Notificaciones.fecha_creacion.asc())
+            .limit(50)
+            .with_for_update(skip_locked=True)
+        )
+    ).all()
+
+    for notificacion in pendientes:
+        enviado = await asyncio.to_thread(
+            _enviar_correo,
+            notificacion.destinatario or "",
+            notificacion.asunto,
+            notificacion.mensaje,
+        )
+        notificacion.estado = "enviada" if enviado else "error"
+        notificacion.fecha_envio = datetime.now()
+
+
+async def procesar_procesos_automaticos() -> dict[str, int]:
+    """Expira ofertas, reasigna cupos y envía correos pendientes."""
+    expiradas = 0
+    nuevas = 0
+    async with get_con().get_session() as session:
+        async with session.begin():
+            expiradas, nuevas = await _expirar_ofertas(session)
+            nuevas += await _procesar_cupos_disponibles(session)
+            await _enviar_notificaciones_pendientes(session)
+    return {"ofertas_expiradas": expiradas, "nuevas_ofertas": nuevas}
+
+
+async def bucle_procesos_automaticos(intervalo_segundos: int = 60) -> None:
+    while True:
+        try:
+            await procesar_procesos_automaticos()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Error en el procesamiento automático de ofertas")
+        await asyncio.sleep(intervalo_segundos)
 
 
 def _calcular_expiracion_oferta(
@@ -147,6 +324,24 @@ async def _crear_cita_para_cupo(
     session.add(cita)
     cupo.estado = EstadoCupo.OCUPADO.value
     await session.flush()
+
+    paciente = await session.get(models.Pacientes, id_paciente)
+    email = None
+    if paciente:
+        usuario = await session.get(models.Usuarios, paciente.id_usuario)
+        email = usuario.email if usuario else None
+    _crear_notificacion(
+        session,
+        id_paciente=id_paciente,
+        asunto="Cita médica agendada",
+        mensaje=(
+            f"Tu cita quedó agendada para el {cupo.fecha_cupo.isoformat()} "
+            f"a las {cupo.hora_cupo.strftime('%H:%M')}. "
+            "Recuerda asistir con tu documento de identidad."
+        ),
+        tipo="cita",
+        email=email,
+    )
     return cita
 
 
@@ -172,23 +367,20 @@ async def _ofertar_cupo(session: AsyncSession, cupo: models.Cupos) -> dict[str, 
     candidatos = (
         await session.scalars(
             select(models.Lista_Espera)
-            .outerjoin(
+            .join(
                 models.Medicos,
                 models.Lista_Espera.id_medico == models.Medicos.id,
             )
             .where(
                 models.Lista_Espera.estado == EstadoEspera.PENDIENTE.value,
-                or_(
-                    models.Lista_Espera.id_medico.is_(None),
-                    func.lower(func.trim(models.Medicos.especialidad))
-                    == especialidad_cupo,
-                ),
+                func.lower(func.trim(models.Medicos.especialidad))
+                == especialidad_cupo,
             )
             .order_by(
                 models.Lista_Espera.fecha_solicitud.asc(),
                 models.Lista_Espera.id.asc(),
             )
-            .with_for_update(of=models.Lista_Espera, skip_locked=True)
+            .with_for_update(of=models.Lista_Espera)
         )
     ).all()
 
@@ -205,6 +397,28 @@ async def _ofertar_cupo(session: AsyncSession, cupo: models.Cupos) -> dict[str, 
         paciente = await session.get(models.Pacientes, candidato.id_paciente)
         medico = await session.get(models.Medicos, agenda.id_medico)
         await session.flush()
+
+        if paciente:
+            usuario = await session.get(models.Usuarios, paciente.id_usuario)
+            email = usuario.email if usuario else None
+            _crear_notificacion(
+                session,
+                id_paciente=candidato.id_paciente,
+                id_lista_espera=candidato.id,
+                asunto=(
+                    f"Cupo disponible de {medico.especialidad}"
+                    if medico
+                    else "Cupo disponible en lista de espera"
+                ),
+                mensaje=(
+                    f"Se liberó un cupo para el {cupo.fecha_cupo.isoformat()} "
+                    f"a las {cupo.hora_cupo.strftime('%H:%M')}. "
+                    f"Tienes plazo máximo hasta "
+                    f"{fecha_expiracion.strftime('%Y-%m-%d %H:%M')} para confirmarlo."
+                ),
+                tipo="oferta",
+                email=email,
+            )
 
         return {
             "id_lista_espera": candidato.id,
@@ -453,6 +667,13 @@ class PacientesRepository:
             raise ValueError(f"No existe paciente con id: {id_paciente}")
         return paciente
 
+    async def obtener_paciente_por_usuario(self, id_usuario: int) -> dict[str, Any]:
+        paciente = await self.session.scalar(
+            select(models.Pacientes).where(models.Pacientes.id_usuario == id_usuario)
+        )
+        if not paciente:
+            raise ErrorNoEncontrado("El usuario no tiene perfil de paciente")
+        return await self.obtener_paciente_por_id(paciente.id)
 
     async def crear_paciente(self, paciente: PacienteCreateSchema) -> models.Pacientes:
         nuevo_paciente = models.Pacientes(
@@ -570,26 +791,67 @@ class AuthenticationRepository:
     def __init__(self, session: AsyncSession = Depends(get_conexion)):
         self.session = session
 
-    async def login(self, data: LoginSchema) -> bool:
-        query = select(models.Usuarios).where(models.Usuarios.numero_documento == data.numero_documento)
-        result = await self.session.execute(query)
-        usuario = result.scalar_one_or_none()
+    async def login(self, data: LoginSchema) -> dict[str, Any]:
+        query = (
+            select(models.Usuarios, models.Roles.rol)
+            .join(models.Roles, models.Usuarios.id_rol == models.Roles.id)
+            .where(models.Usuarios.numero_documento == data.numero_documento)
+        )
+        fila = (await self.session.execute(query)).one_or_none()
 
-    
-        if not usuario:
-            raise ValueError('El usuario con el documento no existe')
+        if not fila:
+            raise ValueError("Número de documento o contraseña incorrectos")
 
-        es_valida = verify_password(data.password, usuario.password)
+        usuario, rol = fila
 
-        if not es_valida:
-            return False
+        if not verify_password(data.password, usuario.password):
+            raise ValueError("Número de documento o contraseña incorrectos")
 
-        return True
+        if not usuario.is_active:
+            raise ValueError("La cuenta está inactiva. Contacta a la IPS.")
 
-    async def register(self, data: RegistroUsuarioSchema) -> dict:
+        return {
+            "id": usuario.id,
+            "id_rol": usuario.id_rol,
+            "rol": rol,
+            "tipo_documento": usuario.tipo_documento,
+            "numero_documento": usuario.numero_documento,
+            "email": usuario.email,
+            "is_active": usuario.is_active,
+            "created_at": usuario.created_at,
+        }
+
+    async def hay_usuarios(self) -> bool:
+        return bool(
+            await self.session.scalar(select(func.count(models.Usuarios.id)))
+        )
+
+    async def register(
+        self,
+        data: RegistroUsuarioSchema,
+        rol_forzado: str | None = None,
+    ) -> dict:
         try:
+            if rol_forzado is not None:
+                objetivo = _normalizar_rol(rol_forzado)
+                roles = (await self.session.scalars(select(models.Roles))).all()
+                rol_encontrado = next(
+                    (r for r in roles if _normalizar_rol(r.rol) == objetivo),
+                    None,
+                )
+            else:
+                if data.id_rol is None:
+                    raise ErrorReglaNegocio("El rol es obligatorio para registrar el usuario")
+                rol_encontrado = await self.session.get(models.Roles, data.id_rol)
+
+            if not rol_encontrado:
+                raise ErrorNoEncontrado("El rol indicado no existe")
+
+            id_rol = rol_encontrado.id
+            rol = _normalizar_rol(rol_encontrado.rol)
+
             nuevo_usuario = models.Usuarios(
-                id_rol=data.id_rol,
+                id_rol=id_rol,
                 tipo_documento=data.tipo_documento,
                 numero_documento=data.numero_documento,
                 email=data.email,
@@ -598,11 +860,12 @@ class AuthenticationRepository:
             self.session.add(nuevo_usuario)
             await self.session.flush()
 
-            query = select(models.Roles.rol).where(models.Roles.id == data.id_rol)
-            result = await self.session.execute(query)
-            rol = result.scalar_one_or_none()
-
             if rol == "paciente":
+                if not data.nombres or not data.apellidos or not data.fecha_nacimiento or not data.telefono:
+                    raise ErrorReglaNegocio(
+                        "Para el rol paciente son obligatorios nombres, apellidos, "
+                        "fecha de nacimiento y teléfono"
+                    )
                 nuevo_paciente = models.Pacientes(
                     id_usuario=nuevo_usuario.id,
                     nombres=data.nombres,
@@ -614,6 +877,11 @@ class AuthenticationRepository:
                 self.session.add(nuevo_paciente)
 
             elif rol == "medico":
+                if not data.nombres or not data.apellidos or not data.telefono or not data.tarjeta_profesional or not data.especialidad or not data.consultorio:
+                    raise ErrorReglaNegocio(
+                        "Para el rol médico son obligatorios nombres, apellidos, "
+                        "teléfono, tarjeta profesional, especialidad y consultorio"
+                    )
                 nuevo_medico = models.Medicos(
                     id_usuario=nuevo_usuario.id,
                     nombres=data.nombres,
@@ -663,6 +931,12 @@ class AgendaRepository:
             raise ErrorNoEncontrado(f"No hay agenda asignada al medico con id: {id_medico}")
         
         return [dict(a) for a in agenda]
+
+    async def obtener_agenda_por_id(self, id_agenda: int) -> models.Agenda_Medicas:
+        agenda = await self.session.get(models.Agenda_Medicas, id_agenda)
+        if not agenda:
+            raise ErrorNoEncontrado(f"No existe agenda con id: {id_agenda}")
+        return agenda
 
     async def crear_agenda(self, data: AgendaCreateSchema) -> models.Agenda_Medicas:
         medico = await self.session.get(models.Medicos, data.id_medico)
@@ -759,7 +1033,7 @@ class CuposRepository:
         fecha_fin: date | None = None,
         limite: int = 200,
     ) -> List[dict[str, Any]]:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             await _expirar_ofertas(self.session)
 
         hoy = date.today()
@@ -836,7 +1110,7 @@ class CuposRepository:
         return dict(cupo)
 
     async def cambiar_estado(self, id_cupo: int, data: CupoUpdateSchema) -> models.Cupos:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             cupo = await self.session.get(models.Cupos, id_cupo, with_for_update=True)
             if not cupo:
                 raise ErrorNoEncontrado(f"No existe cupo con id: {id_cupo}")
@@ -866,7 +1140,7 @@ class CitasRepository:
 
     async def crear_cita(self, data: CitaCreateSchema) -> models.Citas:
         try:
-            async with self.session.begin():
+            async with _transaccion(self.session):
                 await _expirar_ofertas(self.session)
 
                 cupo = await self.session.scalar(
@@ -981,7 +1255,7 @@ class CitasRepository:
         return [dict(c) for c in result.mappings().all()]
 
     async def cancelar_cita(self, id_cita: int) -> tuple[models.Citas, dict[str, Any] | None]:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             cita = await self.session.scalar(
                 select(models.Citas)
                 .where(models.Citas.id == id_cita)
@@ -1008,7 +1282,7 @@ class CitasRepository:
     async def actualizar_estado_cita(
         self, id_cita: int, nuevo_estado: str
     ) -> tuple[models.Citas, dict[str, Any] | None]:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             cita = await self.session.scalar(
                 select(models.Citas)
                 .where(models.Citas.id == id_cita)
@@ -1106,7 +1380,7 @@ class ListaEsperaRepository:
         )
 
     async def crear_entrada(self, data: ListaEsperaCreateSchema) -> models.Lista_Espera:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             paciente = await self.session.get(models.Pacientes, data.id_paciente)
             if not paciente:
                 raise ErrorNoEncontrado(f"No existe paciente con id: {data.id_paciente}")
@@ -1152,19 +1426,17 @@ class ListaEsperaRepository:
         self,
         id_medico: int | None = None,
         estado: str | None = None,
+        id_paciente: int | None = None,
     ) -> List[dict[str, Any]]:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             await _expirar_ofertas(self.session)
             await _procesar_cupos_disponibles(self.session, id_medico)
 
         query = self._query_detalle()
         if id_medico:
-            query = query.where(
-                or_(
-                    models.Lista_Espera.id_medico == id_medico,
-                    models.Lista_Espera.id_medico.is_(None),
-                )
-            )
+            query = query.where(models.Lista_Espera.id_medico == id_medico)
+        if id_paciente:
+            query = query.where(models.Lista_Espera.id_paciente == id_paciente)
         if estado:
             query = query.where(models.Lista_Espera.estado == estado)
 
@@ -1184,7 +1456,7 @@ class ListaEsperaRepository:
         return dict(entrada)
 
     async def cancelar_entrada(self, id_entrada: int) -> models.Lista_Espera:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             entrada = await self.session.get(
                 models.Lista_Espera, id_entrada, with_for_update=True
             )
@@ -1216,7 +1488,7 @@ class ListaEsperaRepository:
         error: Exception | None = None
         cita: models.Citas | None = None
 
-        async with self.session.begin():
+        async with _transaccion(self.session):
             entrada = await self.session.get(
                 models.Lista_Espera, id_entrada, with_for_update=True
             )
@@ -1258,7 +1530,7 @@ class ListaEsperaRepository:
         return cita
 
     async def rechazar_oferta(self, id_entrada: int) -> models.Lista_Espera:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             entrada = await self.session.get(
                 models.Lista_Espera, id_entrada, with_for_update=True
             )
@@ -1280,6 +1552,75 @@ class ListaEsperaRepository:
         return entrada
 
     async def procesar_expiradas(self) -> dict[str, int]:
-        async with self.session.begin():
+        async with _transaccion(self.session):
             expiradas, nuevas = await _expirar_ofertas(self.session)
         return {"ofertas_expiradas": expiradas, "nuevas_ofertas": nuevas}
+
+
+class NotificacionesRepository:
+    def __init__(self, session: AsyncSession = Depends(get_conexion)):
+        self.session = session
+
+    async def listar(self, id_paciente: int, solo_no_leidas: bool = False) -> List[dict[str, Any]]:
+        query = (
+            select(models.Notificaciones)
+            .where(
+                models.Notificaciones.id_paciente == id_paciente,
+                models.Notificaciones.canal == "app",
+            )
+            .order_by(models.Notificaciones.fecha_creacion.desc())
+            .limit(100)
+        )
+        if solo_no_leidas:
+            query = query.where(models.Notificaciones.leida.is_(False))
+        filas = (await self.session.scalars(query)).all()
+        return [
+            {
+                "id": n.id,
+                "id_paciente": n.id_paciente,
+                "id_lista_espera": n.id_lista_espera,
+                "tipo": n.tipo,
+                "asunto": n.asunto,
+                "mensaje": n.mensaje,
+                "leida": n.leida,
+                "fecha_creacion": n.fecha_creacion,
+            }
+            for n in filas
+        ]
+
+    async def marcar_leida(self, id_notificacion: int, id_paciente: int) -> dict[str, Any]:
+        notificacion = await self.session.scalar(
+            select(models.Notificaciones).where(
+                models.Notificaciones.id == id_notificacion,
+                models.Notificaciones.id_paciente == id_paciente,
+                models.Notificaciones.canal == "app",
+            )
+        )
+        if not notificacion:
+            raise ErrorNoEncontrado(
+                f"No existe notificación con id: {id_notificacion}"
+            )
+        notificacion.leida = True
+        await self.session.commit()
+        return {
+            "id": notificacion.id,
+            "id_paciente": notificacion.id_paciente,
+            "id_lista_espera": notificacion.id_lista_espera,
+            "tipo": notificacion.tipo,
+            "asunto": notificacion.asunto,
+            "mensaje": notificacion.mensaje,
+            "leida": notificacion.leida,
+            "fecha_creacion": notificacion.fecha_creacion,
+        }
+
+    async def contar_no_leidas(self, id_paciente: int) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count(models.Notificaciones.id)).where(
+                    models.Notificaciones.id_paciente == id_paciente,
+                    models.Notificaciones.canal == "app",
+                    models.Notificaciones.leida.is_(False),
+                )
+            )
+            or 0
+        )

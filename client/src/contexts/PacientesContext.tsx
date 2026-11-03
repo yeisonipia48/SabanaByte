@@ -27,6 +27,7 @@ export function PacientesProvider({ children }: { children: ReactNode }) {
   return <PacientesContext.Provider value={value}>{children}</PacientesContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePacientesContext() {
   const context = useContext(PacientesContext)
   if (context === undefined) {

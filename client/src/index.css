@@ -4,18 +4,43 @@
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4rem;
 }
 
 @layer base {
+  html {
+    font-size: 18px;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     @apply bg-white text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-200;
     margin: 0;
     min-width: 320px;
   }
 
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
   #root {
     min-height: 100dvh;
   }
+}
+
+::selection {
+  background-color: color-mix(in oklab, var(--color-sky-600) 22%, transparent);
+  color: inherit;
 }
 
 /* Degradado institucional sobre la imagen del hero */
@@ -129,6 +154,19 @@ textarea {
   }
 }
 
+@keyframes ui-progress {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
+
+.animate-progress {
+  animation: ui-progress 1.2s ease-in-out infinite;
+}
+
 .animate-fade-in {
   animation: ui-fade-in 180ms ease-out both;
 }
@@ -196,6 +234,19 @@ textarea {
 
   .loading-banner::after {
     display: none;
+  }
+
+  .animate-progress {
+    width: 100%;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* Evita el rebote de la página en dispositivos con puntero fino */
+@media (pointer: fine) {
+  html {
+    overscroll-behavior: none;
   }
 }
 

@@ -172,3 +172,28 @@ class Lista_Espera(Base):
     paciente: Mapped["Pacientes"] = relationship(back_populates="lista_espera")
     medico: Mapped[Optional["Medicos"]] = relationship(back_populates="lista_espera")
     cupo_ofrecido: Mapped[Optional["Cupos"]] = relationship(foreign_keys=[id_cupo_ofrecido])
+
+
+class Notificaciones(Base):
+    __tablename__ = "notificaciones"
+    __table_args__ = (
+        Index("ix_notificaciones_paciente_leida", "id_paciente", "leida"),
+        Index("ix_notificaciones_estado_canal", "estado", "canal"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, autoincrement=True, primary_key=True)
+    id_paciente: Mapped[int] = mapped_column(Integer, ForeignKey(
+        "pacientes.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False)
+    id_lista_espera: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey(
+        "lista_espera.id", ondelete="SET NULL", onupdate="CASCADE"),
+        nullable=True)
+    tipo: Mapped[str] = mapped_column(String(30), nullable=False, default="oferta")
+    canal: Mapped[str] = mapped_column(String(20), nullable=False, default="app")
+    destinatario: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    asunto: Mapped[str] = mapped_column(String(150), nullable=False)
+    mensaje: Mapped[str] = mapped_column(Text, nullable=False)
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="pendiente")
+    fecha_creacion: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    fecha_envio: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    leida: Mapped[bool] = mapped_column(nullable=False, default=False)

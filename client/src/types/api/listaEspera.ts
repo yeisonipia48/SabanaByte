@@ -1,6 +1,6 @@
 export interface ListaEsperaCreateApiRequest {
   id_paciente: number
-  id_medico?: number | null
+  id_medico: number
   prioridad?: number
 }
 

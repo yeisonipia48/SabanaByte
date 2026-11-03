@@ -93,13 +93,13 @@ function MedicoJornadaModule({ user }: MedicoJornadaModuleProps) {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Mi jornada</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Mi jornada</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Revisa las citas del día y registra la asistencia de tus pacientes.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="jornada-fecha" className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+          <label htmlFor="jornada-fecha" className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
             Fecha
           </label>
           <input
@@ -107,12 +107,12 @@ function MedicoJornadaModule({ user }: MedicoJornadaModuleProps) {
             type="date"
             value={fecha}
             onChange={(event) => setFecha(event.target.value)}
-            className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+            className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           />
           <button
             type="button"
             onClick={loadData}
-            className="inline-flex items-center gap-2 border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             Actualizar
@@ -136,12 +136,12 @@ function MedicoJornadaModule({ user }: MedicoJornadaModuleProps) {
             ].map((card) => (
               <div key={card.label} className="border border-slate-200 bg-white p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     {card.label}
                   </p>
                   <card.icon className="h-4 w-4 text-sky-700" aria-hidden="true" />
                 </div>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{card.value}</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">{card.value}</p>
               </div>
             ))}
       </div>

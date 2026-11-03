@@ -730,10 +730,21 @@ class LoginSchema(BaseModel):
     )
 
 
+class LoginResponseSchema(BaseModel):
+    access_token: str = Field(..., description="Token JWT para autenticar las solicitudes.")
+    token_type: str = Field("bearer", description="Tipo de token.")
+    expires_in: int = Field(..., description="Vigencia del token en segundos.", examples=[28800])
+    usuario: UsuarioResponseSchema = Field(..., description="Datos del usuario autenticado.")
+
+
 class RegistroUsuarioSchema(BaseModel):
-    id_rol: int = Field(
-        ...,
-        description="Identificador del rol seleccionado en la tabla de roles.",
+    id_rol: int | None = Field(
+        None,
+        description=(
+            "Identificador del rol. En el registro público se ignora y siempre "
+            "se asigna el rol paciente. Solo el personal administrativo puede "
+            "crear otros roles mediante el endpoint de personal."
+        ),
         examples=[2],
     )
     tipo_documento: str = Field(
@@ -1432,12 +1443,11 @@ class ListaEsperaCreateSchema(BaseModel):
         description="Identificador del paciente que solicita el cupo.",
         examples=[12],
     )
-    id_medico: int | None = Field(
-        None,
+    id_medico: int = Field(
+        ...,
         description=(
-            "Médico preferido. Si se omite, la solicitud acepta cualquier "
-            "especialidad. Si se informa, la solicitud solo es compatible con "
-            "cupos de la especialidad de ese médico."
+            "Médico solicitado. La solicitud solo es compatible con cupos de "
+            "la misma especialidad de ese médico."
         ),
         examples=[9],
     )
@@ -1704,3 +1714,22 @@ class ProcesarExpiradasResponseSchema(BaseModel):
             "example": {"ofertas_expiradas": 3, "nuevas_ofertas": 2}
         }
     )
+
+
+class NotificacionResponseSchema(BaseModel):
+    id: int = Field(..., description="Identificador de la notificación.")
+    id_paciente: int = Field(..., description="Paciente destinatario.")
+    id_lista_espera: int | None = Field(
+        None, description="Solicitud de lista de espera relacionada, si aplica."
+    )
+    tipo: str = Field(..., description="Tipo de notificación.", examples=["oferta"])
+    asunto: str = Field(..., description="Asunto de la notificación.")
+    mensaje: str = Field(..., description="Contenido de la notificación.")
+    leida: bool = Field(..., description="Indica si el paciente ya la leyó.")
+    fecha_creacion: datetime = Field(..., description="Fecha de creación.")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificacionesNoLeidasResponseSchema(BaseModel):
+    no_leidas: int = Field(..., description="Cantidad de notificaciones sin leer.")

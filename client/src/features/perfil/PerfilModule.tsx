@@ -176,60 +176,60 @@ function PerfilModule({ user, onUserUpdate }: PerfilModuleProps) {
 
   return (
     <div className="space-y-4">
-      <div className="border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
+      <div className="border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center border border-slate-200 text-sky-700">
+          <span className="flex h-10 w-10 items-center justify-center border border-slate-200 text-sky-700 dark:border-slate-700 dark:text-sky-300">
             <UserRound className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Mi perfil</h1>
-            <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-2xl">Mi perfil</h1>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
               Consulta y actualiza tus datos de contacto
             </p>
           </div>
         </div>
       </div>
 
-      <div className="border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">
+      <div className="border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
           Datos de la cuenta
         </h2>
         <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Nombre</dt>
-            <dd className="mt-0.5 text-sm text-slate-900">{user.fullName}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nombre</dt>
+            <dd className="mt-0.5 text-sm text-slate-900 dark:text-slate-100">{user.fullName}</dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rol</dt>
-            <dd className="mt-0.5 text-sm text-slate-900">{user.role}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Rol</dt>
+            <dd className="mt-0.5 text-sm text-slate-900 dark:text-slate-100">{user.role}</dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Documento
             </dt>
-            <dd className="mt-0.5 text-sm text-slate-900">
+            <dd className="mt-0.5 text-sm text-slate-900 dark:text-slate-100">
               {user.documentType} {user.documentNumber}
             </dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Usuario
             </dt>
-            <dd className="mt-0.5 text-sm text-slate-900">{user.username}</dd>
+            <dd className="mt-0.5 text-sm text-slate-900 dark:text-slate-100">{user.username}</dd>
           </div>
         </dl>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5"
+        className="border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-4 sm:px-6 sm:py-5"
       >
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
           Datos de contacto
         </h2>
 
         {loading ? (
-          <p className="animate-fade-in mt-3 text-sm text-slate-500" role="status" aria-live="polite">Cargando información…</p>
+          <p className="animate-fade-in mt-3 text-sm text-slate-500 dark:text-slate-400" role="status" aria-live="polite">Cargando información…</p>
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <AdminFormField
@@ -311,12 +311,19 @@ function PerfilModule({ user, onUserUpdate }: PerfilModuleProps) {
         )}
 
         {error ? (
-          <p className="mt-3 border-l-4 border-rose-500 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          <p
+            role="alert"
+            className="animate-fade-up mt-3 border-l-4 border-rose-500 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-300"
+          >
             {error}
           </p>
         ) : null}
         {success ? (
-          <p className="mt-3 border-l-4 border-emerald-500 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          <p
+            role="status"
+            aria-live="polite"
+            className="animate-fade-up mt-3 border-l-4 border-emerald-500 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+          >
             {success}
           </p>
         ) : null}
@@ -325,10 +332,11 @@ function PerfilModule({ user, onUserUpdate }: PerfilModuleProps) {
           <button
             type="submit"
             disabled={saving || loading}
-            className="inline-flex items-center gap-2 border border-sky-700 bg-sky-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-busy={saving}
+            className="inline-flex items-center gap-2 border border-sky-700 bg-sky-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-sky-800 active:bg-sky-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500"
           >
             <Save className="h-4 w-4" aria-hidden="true" />
-            {saving ? 'Guardando...' : 'Guardar cambios'}
+            {saving ? 'Guardando…' : 'Guardar cambios'}
           </button>
         </div>
       </form>

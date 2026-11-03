@@ -31,15 +31,15 @@ const ESTADO_LABEL: Record<string, string> = {
 function estadoBadge(estado: string): string {
   switch (estado) {
     case 'atendida':
-      return 'bg-emerald-50 text-emerald-700'
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
     case 'cancelada':
-      return 'bg-rose-50 text-rose-700'
+      return 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
     case 'no_asistio':
-      return 'bg-amber-50 text-amber-700'
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
     case 'confirmada':
-      return 'bg-sky-50 text-sky-700'
+      return 'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300'
     default:
-      return 'bg-slate-100 text-slate-600'
+      return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
   }
 }
 
@@ -131,8 +131,8 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">Mis citas</h2>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Mis citas</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Consulta y actualiza la asistencia de las citas de tus pacientes.
         </p>
       </div>
@@ -141,7 +141,7 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
         <select
           value={estado}
           onChange={(event) => setEstado(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Filtrar por estado"
         >
           {ESTADOS.map((option) => (
@@ -154,7 +154,7 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
           type="date"
           value={fecha}
           onChange={(event) => setFecha(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Filtrar por fecha"
         />
         <input
@@ -166,7 +166,7 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar paciente, documento o motivo…"
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:col-span-2"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:col-span-2"
         />
       </div>
 
@@ -174,7 +174,7 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
         <button
           type="button"
           onClick={loadData}
-          className="inline-flex items-center gap-2 border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Actualizar
@@ -216,7 +216,7 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
                 <button
                   type="button"
                   onClick={() => setSelected(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Ver
@@ -278,7 +278,7 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+            className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Cerrar
           </button>
@@ -287,38 +287,38 @@ function MedicoCitasModule({ user }: MedicoCitasModuleProps) {
         {selected ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Paciente</dt>
-              <dd className="text-sm text-slate-900">{selected.paciente}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Paciente</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.paciente}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Documento</dt>
-              <dd className="text-sm text-slate-900">{selected.numero_documento}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Documento</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.numero_documento}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Correo</dt>
-              <dd className="text-sm text-slate-900">{selected.email}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Correo</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.email}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Especialidad</dt>
-              <dd className="text-sm text-slate-900">{selected.especialidad}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Especialidad</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.especialidad}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fecha y hora</dt>
-              <dd className="text-sm text-slate-900">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Fecha y hora</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">
                 {selected.fecha_cupo} {selected.hora_cupo?.slice(0, 5)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Consultorio</dt>
-              <dd className="text-sm text-slate-900">{selected.consultorio}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Consultorio</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.consultorio}</dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Motivo</dt>
-              <dd className="text-sm text-slate-900">{selected.motivo_consulta || 'Sin motivo registrado'}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Motivo</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.motivo_consulta || 'Sin motivo registrado'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Estado</dt>
-              <dd className="text-sm text-slate-900">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estado</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">
                 {ESTADO_LABEL[selected.estado] ?? selected.estado}
               </dd>
             </div>

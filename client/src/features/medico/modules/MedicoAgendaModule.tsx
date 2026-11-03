@@ -207,8 +207,8 @@ function MedicoAgendaModule({ user }: MedicoAgendaModuleProps) {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Mi agenda</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Mi agenda</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Crea tus jornadas y genera los cupos disponibles para tus pacientes.
           </p>
         </div>
@@ -232,12 +232,12 @@ function MedicoAgendaModule({ user }: MedicoAgendaModuleProps) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar por fecha, hora o estado…"
-          className="w-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:w-80"
+          className="w-full border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:w-80"
         />
         <button
           type="button"
           onClick={loadData}
-          className="inline-flex items-center justify-center gap-2 border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Actualizar
@@ -272,8 +272,8 @@ function MedicoAgendaModule({ user }: MedicoAgendaModuleProps) {
               <span
                 className={`inline-flex px-2 py-0.5 text-xs font-medium ${
                   row.estado === 'activo'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-slate-100 text-slate-600'
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
                 }`}
               >
                 {row.estado === 'activo' ? 'Activa' : 'Inactiva'}
@@ -287,7 +287,7 @@ function MedicoAgendaModule({ user }: MedicoAgendaModuleProps) {
                 <button
                   type="button"
                   onClick={() => openView(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Ver
@@ -295,7 +295,7 @@ function MedicoAgendaModule({ user }: MedicoAgendaModuleProps) {
                 <button
                   type="button"
                   onClick={() => openEdit(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <Edit className="h-3.5 w-3.5" />
                   Editar
@@ -340,7 +340,7 @@ function MedicoAgendaModule({ user }: MedicoAgendaModuleProps) {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="inline-flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700"
+              className="inline-flex items-center gap-2 border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
             >
               {mode === 'view' ? 'Cerrar' : 'Cancelar'}
             </button>

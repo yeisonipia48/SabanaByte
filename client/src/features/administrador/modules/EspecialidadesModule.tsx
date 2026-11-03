@@ -118,7 +118,7 @@ function EspecialidadesModule() {
                 <button
                   type="button"
                   onClick={() => openView(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Ver
@@ -126,7 +126,7 @@ function EspecialidadesModule() {
                 <button
                   type="button"
                   onClick={() => openEdit(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <Edit className="h-3.5 w-3.5" />
                   Editar
@@ -162,7 +162,7 @@ function EspecialidadesModule() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="inline-flex items-center gap-2 border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700"
+              className="inline-flex items-center gap-2 border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300"
             >
               {mode === 'view' ? 'Cerrar' : 'Cancelar'}
             </button>

@@ -116,8 +116,8 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">Agendar cita</h2>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Agendar cita</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Elige un cupo disponible y reserva tu cita con el especialista.
         </p>
       </div>
@@ -126,7 +126,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
         <select
           value={especialidad}
           onChange={(event) => setEspecialidad(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Filtrar por especialidad"
         >
           <option value="">Todas las especialidades</option>
@@ -139,7 +139,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
         <select
           value={medicoId}
           onChange={(event) => setMedicoId(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Filtrar por médico"
         >
           <option value="">Todos los médicos</option>
@@ -153,14 +153,14 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
           type="date"
           value={fechaInicio}
           onChange={(event) => setFechaInicio(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Fecha inicial"
         />
         <input
           type="date"
           value={fechaFin}
           onChange={(event) => setFechaFin(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Fecha final"
         />
         <div className="relative">
@@ -177,7 +177,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar…"
-            className="w-full border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+            className="w-full border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 py-2 pl-9 pr-3 text-sm text-slate-900 dark:text-slate-100 transition-shadow focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           />
         </div>
       </div>
@@ -186,7 +186,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
         <button
           type="button"
           onClick={loadSlots}
-          className="inline-flex items-center gap-2 border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center gap-2 border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Actualizar
@@ -208,7 +208,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
       ) : null}
 
       {filtered.length === 0 && !loading ? (
-        <div className="border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+        <div className="border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
           No hay cupos disponibles con los filtros seleccionados.
         </div>
       ) : (
@@ -217,16 +217,16 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
             <article key={slot.id_cupo} className="border border-slate-200 bg-white p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {slot.fecha_cupo} · {slot.hora_cupo?.slice(0, 5)}
                   </p>
-                  <p className="text-xs text-slate-500">{slot.especialidad}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{slot.especialidad}</p>
                 </div>
                 <span className="bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
                   {slot.duracion_cita} min
                 </span>
               </div>
-              <dl className="mt-3 space-y-1 text-xs text-slate-600">
+              <dl className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex justify-between gap-2">
                   <dt>Médico</dt>
                   <dd className="text-right font-medium text-slate-800">{slot.medico}</dd>
@@ -258,7 +258,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+              className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancelar
             </button>
@@ -268,7 +268,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
               disabled={booking}
               className="bg-sky-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-sky-900 disabled:opacity-60"
             >
-              {booking ? 'Agendando...' : 'Confirmar cita'}
+              {booking ? 'Agendando…' : 'Confirmar cita'}
             </button>
           </>
         }
@@ -277,22 +277,22 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
           <div className="space-y-3">
             <dl className="grid gap-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Médico</dt>
-                <dd className="text-slate-900">{selected.medico}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Médico</dt>
+                <dd className="text-slate-900 dark:text-slate-100">{selected.medico}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Especialidad</dt>
-                <dd className="text-slate-900">{selected.especialidad}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Especialidad</dt>
+                <dd className="text-slate-900 dark:text-slate-100">{selected.especialidad}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fecha y hora</dt>
-                <dd className="text-slate-900">
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Fecha y hora</dt>
+                <dd className="text-slate-900 dark:text-slate-100">
                   {selected.fecha_cupo} {selected.hora_cupo?.slice(0, 5)}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Consultorio</dt>
-                <dd className="text-slate-900">{selected.consultorio}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Consultorio</dt>
+                <dd className="text-slate-900 dark:text-slate-100">{selected.consultorio}</dd>
               </div>
             </dl>
             <AdminFormField

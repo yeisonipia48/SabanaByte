@@ -1,9 +1,11 @@
 import { API_CONFIG } from '../../config/api'
 import { httpClient } from '../../lib/httpClient'
+import { setAuthToken } from '../../lib/authToken'
 import { friendlyErrorMessage } from '../../lib/apiErrors'
 import type { AuthUser } from './types'
 import type {
   LoginApiRequest,
+  LoginResponseApi,
   MedicoApi,
   PacienteApi,
   RoleKind,
@@ -17,6 +19,8 @@ export interface AttemptLoginResult {
   ok: boolean
   message?: string
   user?: UsuarioApi
+  token?: string
+  expiresIn?: number
 }
 
 export function createUsernameFromFullName(fullName: string): string {
@@ -50,33 +54,26 @@ export async function attemptLogin(
       password,
     }
 
-    const loginOk = await httpClient.post<boolean>(
+    const response = await httpClient.post<LoginResponseApi>(
       API_CONFIG.ENDPOINTS.AUTH.LOGIN,
       loginRequest,
     )
 
-    if (loginOk !== true) {
+    if (!response?.access_token || !response.usuario) {
       return {
         ok: false,
         message: 'Documento o contraseña incorrectos.',
       }
     }
 
-    const usuarios = await httpClient.get<UsuarioApi[]>(
-      API_CONFIG.ENDPOINTS.USUARIOS.BASE,
-    )
-    const user = usuarios.find(
-      (candidate) => candidate.numero_documento === document,
-    )
+    setAuthToken(response.access_token)
 
-    if (!user) {
-      return {
-        ok: false,
-        message: 'No se pudo cargar el usuario autenticado. Intenta de nuevo.',
-      }
+    return {
+      ok: true,
+      user: response.usuario,
+      token: response.access_token,
+      expiresIn: response.expires_in,
     }
-
-    return { ok: true, user }
   } catch (error) {
     return { ok: false, message: friendlyErrorMessage(error) }
   }
@@ -92,34 +89,17 @@ export async function refreshUser(current: {
 }): Promise<UsuarioApi | null> {
   const id = Number(current.id ?? 0)
 
-  if (Number.isFinite(id) && id > 0) {
-    try {
-      return await httpClient.get<UsuarioApi>(
-        API_CONFIG.ENDPOINTS.USUARIOS.BY_ID(id),
-      )
-    } catch {
-      // Fallback por documento
-    }
+  if (!Number.isFinite(id) || id <= 0) {
+    return null
   }
 
-  const document = current.documentNumber ?? ''
-  if (document !== '') {
-    try {
-      const usuarios = await httpClient.get<UsuarioApi[]>(
-        API_CONFIG.ENDPOINTS.USUARIOS.BASE,
-      )
-
-      return (
-        usuarios.find(
-          (candidate) => candidate.numero_documento === document,
-        ) ?? null
-      )
-    } catch {
-      // La API no está disponible
-    }
+  try {
+    return await httpClient.get<UsuarioApi>(
+      API_CONFIG.ENDPOINTS.USUARIOS.BY_ID(id),
+    )
+  } catch {
+    return null
   }
-
-  return null
 }
 
 /**

@@ -94,23 +94,23 @@ function AdminInicioModule({ user, onNavigate }: AdminInicioModuleProps) {
 
   return (
     <div className="space-y-4">
-      <div className="border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+      <div className="border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-2xl">
           Panel administrador
         </h1>
-        <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
           Bienvenido(a) <strong>{user.fullName}</strong>. Tienes control total sobre pacientes,
           médicos, agenda, citas y lista de espera.
         </p>
       </div>
 
       {loading ? (
-        <div className="loading-banner animate-fade-in border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+        <div className="loading-banner animate-fade-in border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300" role="status" aria-live="polite">
           Cargando resumen…
         </div>
       ) : null}
       {error ? (
-        <div className="animate-fade-up border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">{error}</div>
+        <div className="animate-fade-up border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300" role="alert">{error}</div>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -118,7 +118,7 @@ function AdminInicioModule({ user, onNavigate }: AdminInicioModuleProps) {
           ? Array.from({ length: 7 }).map((_, index) => (
               <div
                 key={index}
-                className="h-[74px] animate-pulse border border-slate-200 bg-white motion-reduce:animate-none"
+                className="h-[74px] animate-pulse border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 motion-reduce:animate-none"
               />
             ))
           : [
@@ -130,20 +130,20 @@ function AdminInicioModule({ user, onNavigate }: AdminInicioModuleProps) {
               { label: 'Citas atendidas', value: stats.atendidas, icon: Calendar },
               { label: 'No asistió', value: stats.noAsistio, icon: Calendar },
             ].map((card) => (
-              <div key={card.label} className="border border-slate-200 bg-white p-3">
+              <div key={card.label} className="border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     {card.label}
                   </p>
                   <card.icon className="h-4 w-4 text-sky-700" aria-hidden="true" />
                 </div>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{card.value}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">{card.value}</p>
               </div>
             ))}
       </div>
 
-      <div className="border border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">
+      <div className="border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
           Accesos rápidos
         </h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -152,12 +152,12 @@ function AdminInicioModule({ user, onNavigate }: AdminInicioModuleProps) {
               key={module.key}
               type="button"
               onClick={() => onNavigate(module.key)}
-              className="flex items-center gap-3 border border-slate-200 px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
+              className="flex items-center gap-3 border border-slate-200 px-3 py-2.5 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800 dark:active:bg-slate-700"
             >
-              <span className="flex h-9 w-9 items-center justify-center border border-slate-200 text-sky-700">
+              <span className="flex h-9 w-9 items-center justify-center border border-slate-200 text-sky-700 dark:border-slate-700 dark:text-sky-300">
                 <module.icon className="h-4 w-4" aria-hidden="true" />
               </span>
-              <span className="text-sm font-semibold text-slate-900">{module.label}</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{module.label}</span>
             </button>
           ))}
         </div>

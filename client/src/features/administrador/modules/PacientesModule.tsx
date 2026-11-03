@@ -248,12 +248,12 @@ function PacientesModule() {
         createLabel="Crear paciente"
       />
       {loading && (
-        <div className="loading-banner animate-fade-in rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+        <div className="loading-banner animate-fade-in border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300" role="status" aria-live="polite">
           Cargando pacientes desde la base de datos…
         </div>
       )}
       {error && (
-        <div className="animate-fade-up rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
+        <div className="animate-fade-up border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
           {error}
         </div>
       )}

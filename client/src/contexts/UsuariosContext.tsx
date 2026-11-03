@@ -27,6 +27,7 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
   return <UsuariosContext.Provider value={value}>{children}</UsuariosContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useUsuariosContext() {
   const context = useContext(UsuariosContext)
   if (context === undefined) {

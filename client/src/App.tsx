@@ -59,11 +59,13 @@ function App() {
 
   if (checkingSession) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-white text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-white text-slate-600 dark:bg-slate-950 dark:text-slate-300">
         <div
-          className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-sky-700 motion-reduce:animate-none dark:border-slate-800 dark:border-t-sky-500"
+          className="h-1 w-40 overflow-hidden bg-slate-200 dark:bg-slate-800"
           aria-hidden="true"
-        />
+        >
+          <div className="animate-progress h-full w-1/3 bg-sky-700 dark:bg-sky-500" />
+        </div>
         <span className="text-sm" role="status" aria-live="polite">
           Cargando sesión…
         </span>

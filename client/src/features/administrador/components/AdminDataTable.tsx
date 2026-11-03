@@ -52,7 +52,7 @@ function AdminDataTable<T>({
                 {columns.map((_, colIndex) => (
                   <td key={colIndex} className="px-4 py-3">
                     <div
-                      className={`h-3 rounded bg-slate-200/80 dark:bg-slate-700/60 ${
+                      className={`h-3 bg-slate-200/80 dark:bg-slate-700/60 ${
                         colIndex % 3 === 0
                           ? 'w-3/4'
                           : colIndex % 3 === 1

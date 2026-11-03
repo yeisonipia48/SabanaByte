@@ -4,7 +4,20 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#0369a1" />
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem('sabanaByte.theme')
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const isDark = stored ? stored === 'dark' : prefersDark
+          document.documentElement.classList.toggle('dark', isDark)
+        } catch {
+          /* preferencias no disponibles */
+        }
+      })()
+    </script>
     <meta
       name="description"
       content="Portal transaccional de SabanaByte para afiliados, empresas y profesionales de la salud."

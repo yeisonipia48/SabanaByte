@@ -4,12 +4,15 @@ API REST en **FastAPI** para gestionar usuarios, pacientes, médicos, agendas, c
 
 ## Autenticación
 
-Roles por defecto: `1 = admin`, `2 = paciente`, `3 = medico`. `is_active` se almacena, pero **no se valida en el login**.
+Roles por defecto: `1 = admin`, `2 = paciente`, `3 = medico`. El login valida `is_active` y rechaza cuentas inactivas.
+
+La mayoría de endpoints requieren `Authorization: Bearer <token>`. Los endpoints de gestión (`/usuarios`, `/roles`, alta de médicos y agendas) están restringidos al rol administrador; pacientes y médicos solo acceden a sus propios datos.
 
 | Método | Ruta | Descripción | Éxito | Errores |
 |---|---|---|---|---|
-| `POST` | `/auth/login` | Valida credenciales | `202` | `400` |
-| `POST` | `/auth/register` | Registra usuario y perfil según el rol | `201` | `400` |
+| `POST` | `/auth/login` | Valida credenciales y devuelve JWT | `200` | `401`, `403` |
+| `POST` | `/auth/register` | Registra un paciente y su perfil | `201` | `400` |
+| `POST` | `/auth/register-staff` | El administrador registra médicos u otros usuarios | `201` | `400`, `401`, `403` |
 
 ## Convenciones y errores
 
@@ -25,8 +28,9 @@ Roles por defecto: `1 = admin`, `2 = paciente`, `3 = medico`. `is_active` se alm
 |---|---|
 | `200` | Operación exitosa |
 | `201` | Recurso creado |
-| `202` | Solicitud aceptada (login) |
 | `400` | Regla de negocio incumplida o solicitud inválida |
+| `401` | No autenticado o token inválido |
+| `403` | Sin permisos para el rol o cuenta inactiva |
 | `404` | Recurso no encontrado |
 | `409` | Conflicto (cupo tomado, solicitud duplicada) |
 | `422` | Error de validación |
@@ -111,7 +115,7 @@ Filtros de `GET /citas`: `id_paciente`, `id_medico`, `estado`, `fecha`, `fecha_i
 | `POST` | `/lista-espera/{id_entrada}/aceptar` | Acepta oferta y crea cita | `200` | `400`, `404` |
 | `POST` | `/lista-espera/{id_entrada}/rechazar` | Rechaza oferta y reasigna cupo | `200` | `400`, `404` |
 
-Filtros: `id_medico`, `estado`. El filtro por médico incluye solicitudes comodín (`id_medico = null`). Antes de responder, el listado expira ofertas vencidas y genera ofertas para cupos disponibles.
+Filtros: `id_medico`, `estado`. Cada solicitud debe indicar un médico; la oferta se asigna al primer paciente compatible con la especialidad del cupo liberado. Antes de responder, el listado expira ofertas vencidas y genera ofertas para cupos disponibles.
 
 ## Flujos clave
 
@@ -122,7 +126,6 @@ POST /auth/register
 Content-Type: application/json
 
 {
-  "id_rol": 2,
   "tipo_documento": "CC",
   "numero_documento": "1023456789",
   "email": "ana.gomez@example.com",
@@ -140,7 +143,7 @@ Content-Type: application/json
 { "message": "Paciente:  Ana María Gómez Ruiz registrado con exito." }
 ```
 
-Para médico usar `id_rol: 3` y enviar `tarjeta_profesional`, `especialidad` y `consultorio`.
+`POST /auth/register` siempre crea un paciente. Para dar de alta un médico u otro rol, un administrador autenticado usa `POST /auth/register-staff` indicando `id_rol` (por ejemplo `3` para médico) y, en el caso de médicos, `tarjeta_profesional`, `especialidad` y `consultorio`.
 
 ### Login
 
@@ -298,7 +301,7 @@ Citas activas: `pendiente`, `confirmada`. Solicitudes activas: `pendiente`, `ofr
 - Cancelar o marcar `no_asistio` libera el cupo y lo ofrece al primero compatible.
 - La lista de espera es **FIFO** por `fecha_solicitud` e `id`; `prioridad` es informativa.
 - Un paciente no puede tener dos solicitudes activas para el mismo médico; sí para médicos distintos.
-- `id_medico = null` acepta cualquier especialidad; con médico, solo su especialidad.
+- La solicitud se crea para un médico concreto y solo compite por cupos de esa especialidad; un cupo de otro médico de la misma especialidad también es compatible.
 - La oferta vence a las 48 horas o antes de la cita, lo que ocurra primero.
 - Las citas pasadas no generan oferta.
 

@@ -26,14 +26,14 @@ const ESTADO_LABEL: Record<string, string> = {
 function estadoBadge(estado: string): string {
   switch (estado) {
     case 'ofrecida':
-      return 'bg-sky-50 text-sky-700'
+      return 'bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300'
     case 'aceptada':
-      return 'bg-emerald-50 text-emerald-700'
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
     case 'cancelada':
     case 'expirada':
-      return 'bg-rose-50 text-rose-700'
+      return 'bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
     default:
-      return 'bg-amber-50 text-amber-700'
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
   }
 }
 
@@ -109,6 +109,11 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
       return
     }
 
+    if (!doctorId) {
+      alert('Selecciona el médico al que deseas solicitar el cupo.')
+      return
+    }
+
     const priority = Number(prioridad)
     if (!Number.isFinite(priority) || priority < 1 || priority > 5) {
       alert('La prioridad debe estar entre 1 y 5.')
@@ -120,7 +125,7 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
     try {
       await listaEsperaService.create({
         id_paciente: user.profileId,
-        id_medico: doctorId ? Number(doctorId) : null,
+        id_medico: Number(doctorId),
         prioridad: priority,
       })
       setCreateOpen(false)
@@ -181,8 +186,8 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Mi lista de espera</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Mi lista de espera</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Solicita un cupo y acepta o rechaza las ofertas que te asignen.
           </p>
         </div>
@@ -204,13 +209,13 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar por médico, especialidad o estado..."
-          className="w-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:w-80"
+          placeholder="Buscar por médico, especialidad o estado…"
+          className="w-full border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25 sm:w-80"
         />
         <button
           type="button"
           onClick={loadData}
-          className="inline-flex items-center justify-center gap-2 border border-slate-300 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center gap-2 border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Actualizar
@@ -272,7 +277,7 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
                 <button
                   type="button"
                   onClick={() => setSelected(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   Ver
@@ -321,7 +326,7 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
             <button
               type="button"
               onClick={() => setCreateOpen(false)}
-              className="border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+              className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Cancelar
             </button>
@@ -331,19 +336,20 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
               disabled={saving}
               className="bg-sky-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-sky-900 disabled:opacity-60"
             >
-              {saving ? 'Guardando...' : 'Registrar solicitud'}
+              {saving ? 'Guardando…' : 'Registrar solicitud'}
             </button>
           </>
         }
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <AdminFormField
-            label="Médico (opcional)"
+            label="Médico"
             id="lista-medico"
+            required
             value={doctorId}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => setDoctorId(event.target.value)}
           >
-            <option value="">Cualquier médico</option>
+            <option value="">Seleccionar médico</option>
             {medicos.map((medico) => (
               <option key={medico.id} value={medico.id}>
                 {medico.nombres} {medico.apellidos} · {medico.especialidad}
@@ -371,7 +377,7 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+            className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Cerrar
           </button>
@@ -380,42 +386,42 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
         {selected ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Estado</dt>
-              <dd className="text-sm text-slate-900">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estado</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">
                 {ESTADO_LABEL[selected.estado] ?? selected.estado}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Prioridad</dt>
-              <dd className="text-sm text-slate-900">{selected.prioridad}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prioridad</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.prioridad}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Médico solicitado</dt>
-              <dd className="text-sm text-slate-900">{selected.medico || 'Cualquier médico'}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Médico solicitado</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.medico || 'Cualquier médico'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Especialidad</dt>
-              <dd className="text-sm text-slate-900">{selected.especialidad || '-'}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Especialidad</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.especialidad || '-'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fecha de solicitud</dt>
-              <dd className="text-sm text-slate-900">{selected.fecha_solicitud}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Fecha de solicitud</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.fecha_solicitud}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Oferta</dt>
-              <dd className="text-sm text-slate-900">
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Oferta</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">
                 {selected.fecha_cupo
                   ? `${selected.fecha_cupo} ${selected.hora_cupo?.slice(0, 5) ?? ''}`
                   : 'Sin oferta'}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Médico ofrecido</dt>
-              <dd className="text-sm text-slate-900">{selected.medico_ofrecido || '-'}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Médico ofrecido</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.medico_ofrecido || '-'}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">Expira</dt>
-              <dd className="text-sm text-slate-900">{selected.fecha_expiracion || '-'}</dd>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Expira</dt>
+              <dd className="text-sm text-slate-900 dark:text-slate-100">{selected.fecha_expiracion || '-'}</dd>
             </div>
           </dl>
         ) : null}
@@ -436,7 +442,7 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
                 setPendingAction(null)
                 setActionItem(null)
               }}
-              className="border border-slate-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 hover:bg-slate-50"
+              className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Volver
             </button>
@@ -456,7 +462,7 @@ function PacienteListaEsperaModule({ user }: PacienteListaEsperaModuleProps) {
           </>
         }
       >
-        <p className="text-sm text-slate-600">{actionDescription}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">{actionDescription}</p>
       </AdminModal>
     </div>
   )

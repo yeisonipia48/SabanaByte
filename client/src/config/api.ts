@@ -13,6 +13,12 @@ export const API_CONFIG = {
     AUTH: {
       LOGIN: '/auth/login',
       REGISTER: '/auth/register',
+      REGISTER_STAFF: '/auth/register-staff',
+    },
+    NOTIFICACIONES: {
+      BASE: '/notificaciones',
+      NO_LEIDAS: '/notificaciones/no-leidas',
+      MARCAR_LEIDA: (id: number) => `/notificaciones/${id}/leida`,
     },
     USUARIOS: {
       BASE: '/usuarios',

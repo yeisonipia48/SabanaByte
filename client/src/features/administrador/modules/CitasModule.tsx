@@ -236,7 +236,7 @@ function CitasModule() {
         <select
           value={filterStatus}
           onChange={(event) => setFilterStatus(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Filtrar por estado"
         >
           <option value="">Todos los estados</option>
@@ -250,17 +250,17 @@ function CitasModule() {
           type="date"
           value={filterDate}
           onChange={(event) => setFilterDate(event.target.value)}
-          className="border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
+          className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Filtrar por fecha"
         />
       </div>
       {loading && (
-        <div className="loading-banner animate-fade-in rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700" role="status" aria-live="polite">
+        <div className="loading-banner animate-fade-in border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300" role="status" aria-live="polite">
           Cargando citas y disponibilidad desde la base de datos…
         </div>
       )}
       {error && (
-        <div className="animate-fade-up rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
+        <div className="animate-fade-up border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
           {error}
         </div>
       )}
@@ -280,7 +280,7 @@ function CitasModule() {
                 <button
                   type="button"
                   onClick={() => openView(row)}
-                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1 border border-slate-300 px-2 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <Eye className="h-3 w-3" />
                   Ver
@@ -324,7 +324,7 @@ function CitasModule() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               {mode === 'view' ? 'Cerrar' : 'Cancelar'}
             </button>
@@ -412,7 +412,7 @@ function CitasModule() {
           {mode === 'create' ? (
             <div className="sm:col-span-2">
               <AdminFormField
-                label={loadingCupos ? 'Cupos disponibles (cargando...)' : 'Cupo disponible'}
+                label={loadingCupos ? 'Cupos disponibles (cargando…)' : 'Cupo disponible'}
                 id="cupoId"
                 required
                 disabled={loadingCupos || cupos.length === 0}

@@ -166,7 +166,7 @@ export const adminService = {
       consultorio: data.consultorio?.trim() || 'Consultorio 101',
     }
 
-    await httpClient.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, payload)
+    await httpClient.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER_STAFF, payload)
 
     const all = await medicosService.getAll()
     const created = all.find((m) => m.numero_documento === payload.numero_documento)
@@ -363,16 +363,22 @@ export const adminService = {
       status:
         l.estado === 'aceptada'
           ? 'Atendido'
-          : l.estado === 'cancelada'
-            ? 'Cancelado'
-            : 'En espera',
+          : l.estado === 'ofrecida'
+            ? 'Ofertada'
+            : ['cancelada', 'expirada', 'rechazada'].includes(l.estado)
+              ? 'Cancelado'
+              : 'En espera',
     }))
   },
 
   async addListaEspera(data: Omit<ListaEspera, 'id'>): Promise<ListaEspera> {
+    if (!data.doctorId) {
+      throw new Error('Selecciona el médico para la solicitud de lista de espera.')
+    }
+
     const created = await listaEsperaService.create({
       id_paciente: Number(data.patientId),
-      id_medico: data.doctorId ? Number(data.doctorId) : null,
+      id_medico: Number(data.doctorId),
       prioridad: 1,
     })
 

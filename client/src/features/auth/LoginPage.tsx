@@ -17,13 +17,15 @@ function LoginPage({ onLoginSuccess }: LoginPageProps) {
       >
         <MobileBrandBanner />
 
-        <InstitutionalHero className="lg:col-span-6" />
+        <InstitutionalHero className="lg:col-span-5" />
 
-        <section className="h-full min-h-0 overflow-hidden lg:col-span-6">
-          <div className="flex justify-end py-4">
+        <section className="flex h-full min-h-0 flex-col overflow-hidden lg:col-span-7">
+          <div className="flex shrink-0 justify-end px-4 py-2 sm:px-6 lg:px-10 xl:px-12">
             <ThemeToggle />
           </div>
-          <LoginForm onLoginSuccess={onLoginSuccess} />
+          <div className="min-h-0 flex-1">
+            <LoginForm onLoginSuccess={onLoginSuccess} />
+          </div>
         </section>
       </main>
     </div>

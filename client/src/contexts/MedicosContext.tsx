@@ -27,6 +27,7 @@ export function MedicosProvider({ children }: { children: ReactNode }) {
   return <MedicosContext.Provider value={value}>{children}</MedicosContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useMedicosContext() {
   const context = useContext(MedicosContext)
   if (context === undefined) {

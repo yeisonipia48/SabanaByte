@@ -5,8 +5,30 @@ export interface LoginApiRequest {
   password: string
 }
 
+export interface LoginResponseApi {
+  access_token: string
+  token_type: string
+  expires_in: number
+  usuario: UsuarioApi
+}
+
+export interface NotificacionApi {
+  id: number
+  id_paciente: number
+  id_lista_espera: number | null
+  tipo: string
+  asunto: string
+  mensaje: string
+  leida: boolean
+  fecha_creacion: string
+}
+
+export interface NotificacionesNoLeidasApi {
+  no_leidas: number
+}
+
 export interface RegistroUsuarioApiRequest {
-  id_rol: number
+  id_rol?: number
   tipo_documento: string
   numero_documento: string
   email: string

@@ -47,7 +47,7 @@ function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="inline-flex items-center justify-center rounded-lg p-2.5 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      className="inline-flex items-center justify-center border border-transparent p-2 text-slate-600 transition-colors hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
       aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
       title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
     >

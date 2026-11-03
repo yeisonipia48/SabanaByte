@@ -59,7 +59,7 @@ export interface Medico {
 
 export type CitaEstado = 'Programada' | 'Atendida' | 'Cancelada' | 'No asistió'
 export type AgendaEstado = 'Disponible' | 'Ocupado' | 'Bloqueado'
-export type ListaEsperaEstado = 'En espera' | 'Atendido' | 'Cancelado'
+export type ListaEsperaEstado = 'En espera' | 'Ofertada' | 'Atendido' | 'Cancelado'
 
 export interface Cita {
   id: string

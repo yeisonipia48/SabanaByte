@@ -12,6 +12,7 @@ fi
 echo "Construyendo las imágenes..."
 docker build --no-cache -t api-clinica:v1 apiClinica/.
 docker build --no-cache -t frontendcitas:v1 client/.
+docker build --no-cache -t mcp:v1 mcpClinica/.
 
 echo "Gestionando secretos de Docker Swarm..."
 docker secret inspect postgres_user >/dev/null 2>&1 || echo "$postgres_user" | docker secret create postgres_user -
@@ -19,18 +20,31 @@ docker secret inspect postgres_password >/dev/null 2>&1 || echo "$postgres_passw
 docker secret inspect postgres_host >/dev/null 2>&1 || echo "$postgres_host" | docker secret create postgres_host -
 docker secret inspect postgres_db >/dev/null 2>&1 || echo "$postgres_db" | docker secret create postgres_db -
 
+# Secreto estable para firmar los JWT. Sin él cada réplica usaría una clave
+# distinta y los tokens dejarían de ser válidos entre reinicios o réplicas.
+if [ -z "${jwt_secret:-}" ]; then
+  jwt_secret=$(openssl rand -base64 48)
+fi
+docker secret inspect jwt_secret >/dev/null 2>&1 || echo "$jwt_secret" | docker secret create jwt_secret -
+
 echo "Desplegando el stack en Docker Swarm..."
 docker stack deploy -c stack.yaml api-clinica
-docker service update --force api-clinica_api
+
 
 echo "Esperando a que los servicios inicien..."
 sleep 5
 
+contenedor_data=$(docker ps | grep api-clinica_data | awk '{print $1}' | head -n 1)
+if [ -n "$contenedor_data" ]; then
+    echo "Ejecutando script de inicialización de la base de datos..."
+    docker exec -i "$contenedor_data" psql -U "$postgres_user" -d "$postgres_db" -c "SELECT 1;" >/dev/null 2>&1 || docker exec -it "$contenedor_data" psql -U "$postgres_user" -c "CREATE DATABASE $postgres_db;"
+fi
+
 echo "Aplicando migraciones con Alembic..."
 contenedor_api=$(docker ps | grep api-clinica_api | awk '{print $1}' | head -n 1)
 if [ -n "$contenedor_api" ]; then
-    docker exec -it "$contenedor_api" alembic -c alembicApi/ revision --auto-generate -m "configuracion inicial"
-    docker exec -it "$contenedor_api" alembic -c alembicApi/ upgrade +1
+    docker exec -i "$contenedor_api" alembic -c alembicApi/alembic.ini revision --autogenerate -m "configuracion inicial"
+    docker exec -i "$contenedor_api" alembic -c alembicApi/alembic.ini upgrade +1
     echo "¡Migraciones aplicadas con éxito!"
 else
     echo "Aviso: No se encontró el contenedor de la API en ejecución para correr Alembic."
