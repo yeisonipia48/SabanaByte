@@ -18,6 +18,7 @@ import { friendlyErrorMessage } from '../../../lib/apiErrors'
 import type { DocumentType, Medico } from '../types/admin'
 
 const DOCUMENT_TYPES: DocumentType[] = ['CC', 'TI', 'CE', 'PA']
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface FormState {
   documentType: DocumentType
@@ -146,9 +147,36 @@ function MedicosModule() {
     setModalOpen(true)
   }
 
+  const validateForm = (): string | null => {
+    if (!form.documentNumber.trim()) return 'Ingresa el número de documento.'
+    if (!EMAIL_PATTERN.test(form.email.trim())) {
+      return 'Ingresa un correo electrónico válido.'
+    }
+    if (mode === 'create' && !form.password.trim()) {
+      return 'Ingresa una contraseña para el médico.'
+    }
+    if (form.password && form.password.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres.'
+    }
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      return 'Ingresa nombres y apellidos del médico.'
+    }
+    if (!form.phone.trim()) return 'Ingresa el teléfono del médico.'
+    if (!form.specialtyId) return 'Selecciona la especialidad del médico.'
+    if (!form.tarjetaProfesional.trim()) return 'Ingresa la tarjeta profesional.'
+    if (!form.consultorio.trim()) return 'Ingresa el consultorio del médico.'
+    return null
+  }
+
   const handleSubmit = async () => {
     if (mode === 'view' || saving) {
       setModalOpen(false)
+      return
+    }
+
+    const validation = validateForm()
+    if (validation) {
+      setFeedback({ type: 'error', message: validation })
       return
     }
 

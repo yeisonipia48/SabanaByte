@@ -197,7 +197,11 @@ function CitasModule() {
         return
       }
       if (mode === 'edit' && selected) {
-        await adminService.updateCita(selected.id, form)
+        if (form.status === selected.status) {
+          setModalOpen(false)
+          return
+        }
+        await adminService.updateCita(selected.id, { status: form.status })
         await loadData()
         setModalOpen(false)
       }
@@ -212,7 +216,11 @@ function CitasModule() {
   }
 
   const handleDelete = async () => {
-    if (!toDelete) return
+    if (!toDelete || toDelete.status !== 'Programada') {
+      setDeleteOpen(false)
+      setToDelete(null)
+      return
+    }
     try {
       await adminService.removeCita(toDelete.id)
       await loadData()
@@ -285,22 +293,26 @@ function CitasModule() {
                   <Eye className="h-3 w-3" />
                   Ver
                 </button>
-                <button
-                  type="button"
-                  onClick={() => openEdit(row)}
-                  className="inline-flex items-center gap-1 border border-sky-300 px-2 py-1 text-xs text-sky-700 hover:bg-sky-50"
-                >
-                  <Edit className="h-3 w-3" />
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => confirmDelete(row)}
-                  className="inline-flex items-center gap-1 border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Cancelar
-                </button>
+                {row.status === 'Programada' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => openEdit(row)}
+                      className="inline-flex items-center gap-1 border border-sky-300 px-2 py-1 text-xs text-sky-700 hover:bg-sky-50"
+                    >
+                      <Edit className="h-3 w-3" />
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => confirmDelete(row)}
+                      className="inline-flex items-center gap-1 border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Cancelar
+                    </button>
+                  </>
+                ) : null}
               </div>
             ),
           },
@@ -345,7 +357,7 @@ function CitasModule() {
             label="Paciente"
             id="patientId"
             required
-            disabled={mode === 'view'}
+            disabled={mode !== 'create'}
             value={form.patientId}
             onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setForm((prev) => ({ ...prev, patientId: event.target.value }))
@@ -362,7 +374,7 @@ function CitasModule() {
             label="Médico"
             id="doctorId"
             required
-            disabled={mode === 'view'}
+            disabled={mode !== 'create'}
             value={form.doctorId}
             onChange={(event: ChangeEvent<HTMLSelectElement>) => {
               const doctorId = event.target.value
@@ -385,7 +397,7 @@ function CitasModule() {
             label="Especialidad"
             id="specialtyId"
             required
-            disabled={mode === 'view'}
+            disabled={mode !== 'create'}
             value={form.specialtyId}
             onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setForm((prev) => ({ ...prev, specialtyId: event.target.value }))
@@ -403,7 +415,7 @@ function CitasModule() {
             id="date"
             type="date"
             required
-            disabled={mode === 'view'}
+            disabled={mode !== 'create'}
             value={form.date}
             onChange={(event: ChangeEvent<HTMLInputElement>) =>
               setForm((prev) => ({ ...prev, date: event.target.value }))
@@ -425,6 +437,8 @@ function CitasModule() {
                     cupoId,
                     date: cupo?.fecha_cupo ?? prev.date,
                     time: cupo?.hora_cupo ?? prev.time,
+                    doctorId: cupo ? String(cupo.id_medico) : prev.doctorId,
+                    specialtyId: cupo?.especialidad ?? prev.specialtyId,
                   }))
                 }}
               >
@@ -473,7 +487,7 @@ function CitasModule() {
             <AdminFormField
               label="Motivo de consulta (opcional)"
               id="motivoConsulta"
-              disabled={mode === 'view'}
+              disabled={mode !== 'create'}
               value={form.motivoConsulta}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 setForm((prev) => ({ ...prev, motivoConsulta: event.target.value }))

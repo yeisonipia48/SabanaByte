@@ -143,6 +143,11 @@ function ListaEsperaModule() {
 
   const handleDelete = async () => {
     if (!toDelete) return
+    if (toDelete.status !== 'En espera' && toDelete.status !== 'Ofertada') {
+      setDeleteOpen(false)
+      setToDelete(null)
+      return
+    }
     try {
       await adminService.removeListaEspera(toDelete.id)
       await loadData()
@@ -250,14 +255,16 @@ function ListaEsperaModule() {
                     Aceptar
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => confirmDelete(row)}
-                  className="inline-flex items-center gap-1 border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Cancelar
-                </button>
+                {row.status === 'En espera' || row.status === 'Ofertada' ? (
+                  <button
+                    type="button"
+                    onClick={() => confirmDelete(row)}
+                    className="inline-flex items-center gap-1 border border-rose-300 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Cancelar
+                  </button>
+                ) : null}
               </div>
             ),
           },

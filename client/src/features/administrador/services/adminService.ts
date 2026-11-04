@@ -23,6 +23,9 @@ import { API_CONFIG } from '../../../config/api'
 import type { RegistroUsuarioApiRequest, RolApi } from '../../../types/api/auth'
 import { normalizeRole } from '../../../types/api/auth'
 import type { CupoDisponibleResponseApi, CuposDisponiblesQuery } from '../../../types/api/cupos'
+import type { MedicoUpdateApiRequest } from '../../../types/api/medicos'
+import type { PacienteUpdateApiRequest } from '../../../types/api/pacientes'
+import type { UsuarioUpdateApiRequest } from '../../../types/api/usuarios'
 
 const DEFAULT_ESPECIALIDADES: Especialidad[] = [
   { id: 'Medicina General', name: 'Medicina General', description: 'Atención primaria y diagnóstico integral' },
@@ -71,20 +74,32 @@ export const adminService = {
 
   async addPaciente(data: Omit<Paciente, 'id'>): Promise<Paciente> {
     const password = data.password?.trim() ?? ''
+    const documentNumber = data.documentNumber.trim()
+    const email = data.email.trim()
+    const firstName = data.firstName.trim()
+    const lastName = data.lastName.trim()
+    const birthDate = data.birthDate?.trim() ?? ''
+    const phone = data.phone?.trim() ?? ''
+
     if (!password) {
       throw new Error('La contraseña es obligatoria para crear el paciente.')
+    }
+    if (!documentNumber || !email || !firstName || !lastName || !birthDate || !phone) {
+      throw new Error(
+        'Completa documento, correo, nombres, apellidos, fecha de nacimiento y teléfono.',
+      )
     }
 
     const payload: RegistroUsuarioApiRequest = {
       id_rol: await resolveRoleId('paciente'),
       tipo_documento: data.documentType,
-      numero_documento: data.documentNumber.trim(),
-      email: data.email.trim(),
+      numero_documento: documentNumber,
+      email,
       password,
-      nombres: data.firstName.trim(),
-      apellidos: data.lastName.trim(),
-      fecha_nacimiento: data.birthDate || '2000-01-01',
-      telefono: data.phone?.trim() || '0000000000',
+      nombres: firstName,
+      apellidos: lastName,
+      fecha_nacimiento: birthDate,
+      telefono: phone,
       direccion: data.address?.trim() || null,
     }
 
@@ -93,36 +108,56 @@ export const adminService = {
     // Consultar el paciente recién creado en PostgreSQL
     const all = await pacientesService.getAll()
     const created = all.find((p) => p.numero_documento === payload.numero_documento)
-    if (created) {
-      return {
-        id: String(created.id),
-        documentType: data.documentType,
-        documentNumber: created.numero_documento,
-        email: created.email,
-        firstName: created.nombres,
-        lastName: created.apellidos,
-        birthDate: created.fecha_nacimiento,
-        phone: created.telefono,
-        address: created.direccion ?? '',
-        eps: data.eps || 'Compensar',
-        bloodType: data.bloodType || 'O+',
-      }
+    if (!created) {
+      throw new Error(
+        'El paciente se creó, pero no pudimos leer su perfil. Recarga la lista.',
+      )
     }
 
     return {
-      id: String(Date.now()),
-      ...data,
+      id: String(created.id),
+      documentType: data.documentType,
+      documentNumber: created.numero_documento,
+      email: created.email,
+      firstName: created.nombres,
+      lastName: created.apellidos,
+      birthDate: created.fecha_nacimiento,
+      phone: created.telefono,
+      address: created.direccion ?? '',
+      eps: data.eps || 'Compensar',
+      bloodType: data.bloodType || 'O+',
     }
   },
 
   async updatePaciente(id: string, data: Partial<Paciente>): Promise<void> {
-    await pacientesService.update(Number(id), {
-      nombres: data.firstName ?? null,
-      apellidos: data.lastName ?? null,
-      fecha_nacimiento: data.birthDate ?? null,
-      telefono: data.phone ?? null,
-      direccion: data.address ?? null,
-    })
+    const profileUpdate: PacienteUpdateApiRequest = {}
+
+    if (data.firstName !== undefined) profileUpdate.nombres = data.firstName.trim()
+    if (data.lastName !== undefined) profileUpdate.apellidos = data.lastName.trim()
+    if (data.birthDate !== undefined) profileUpdate.fecha_nacimiento = data.birthDate || null
+    if (data.phone !== undefined) profileUpdate.telefono = data.phone.trim()
+    if (data.address !== undefined) profileUpdate.direccion = data.address.trim() || null
+
+    if (
+      data.email !== undefined ||
+      data.documentType !== undefined ||
+      data.documentNumber !== undefined ||
+      Boolean(data.password)
+    ) {
+      const current = await pacientesService.getById(Number(id))
+      const userUpdate: UsuarioUpdateApiRequest = {}
+
+      if (data.email !== undefined) userUpdate.email = data.email.trim()
+      if (data.documentType !== undefined) userUpdate.tipo_documento = data.documentType
+      if (data.documentNumber !== undefined) {
+        userUpdate.numero_documento = data.documentNumber.trim()
+      }
+      if (data.password) userUpdate.password = data.password
+
+      await usuariosService.update(current.id_usuario, userUpdate)
+    }
+
+    await pacientesService.update(Number(id), profileUpdate)
   },
 
   async removePaciente(id: string): Promise<void> {
@@ -148,58 +183,103 @@ export const adminService = {
 
   async addMedico(data: Omit<Medico, 'id'>): Promise<Medico> {
     const password = data.password?.trim() ?? ''
+    const documentNumber = data.documentNumber.trim()
+    const email = data.email.trim()
+    const firstName = data.firstName.trim()
+    const lastName = data.lastName.trim()
+    const phone = data.phone?.trim() ?? ''
+    const tarjetaProfesional = data.tarjetaProfesional?.trim() ?? ''
+    const especialidad = data.specialtyId?.trim() ?? ''
+    const consultorio = data.consultorio?.trim() ?? ''
+
     if (!password) {
       throw new Error('La contraseña es obligatoria para crear el médico.')
+    }
+    if (
+      !documentNumber ||
+      !email ||
+      !firstName ||
+      !lastName ||
+      !phone ||
+      !tarjetaProfesional ||
+      !especialidad ||
+      !consultorio
+    ) {
+      throw new Error(
+        'Completa documento, correo, nombres, apellidos, teléfono, tarjeta profesional, especialidad y consultorio.',
+      )
     }
 
     const payload: RegistroUsuarioApiRequest = {
       id_rol: await resolveRoleId('medico'),
       tipo_documento: data.documentType,
-      numero_documento: data.documentNumber.trim(),
-      email: data.email.trim(),
+      numero_documento: documentNumber,
+      email,
       password,
-      nombres: data.firstName.trim(),
-      apellidos: data.lastName.trim(),
-      telefono: data.phone?.trim() || '0000000000',
-      tarjeta_profesional: data.tarjetaProfesional?.trim() || `TP-${Date.now().toString().slice(-6)}`,
-      especialidad: data.specialtyId?.trim() || 'Medicina General',
-      consultorio: data.consultorio?.trim() || 'Consultorio 101',
+      nombres: firstName,
+      apellidos: lastName,
+      telefono: phone,
+      tarjeta_profesional: tarjetaProfesional,
+      especialidad,
+      consultorio,
     }
 
     await httpClient.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER_STAFF, payload)
 
     const all = await medicosService.getAll()
     const created = all.find((m) => m.numero_documento === payload.numero_documento)
-    if (created) {
-      return {
-        id: String(created.id),
-        documentType: data.documentType,
-        documentNumber: created.numero_documento,
-        email: created.email,
-        firstName: created.nombres,
-        lastName: created.apellidos,
-        specialtyId: created.especialidad,
-        phone: created.telefono,
-        tarjetaProfesional: created.tarjeta_profesional,
-        consultorio: created.consultorio,
-      }
+    if (!created) {
+      throw new Error(
+        'El médico se creó, pero no pudimos leer su perfil. Recarga la lista.',
+      )
     }
 
     return {
-      id: String(Date.now()),
-      ...data,
+      id: String(created.id),
+      documentType: data.documentType,
+      documentNumber: created.numero_documento,
+      email: created.email,
+      firstName: created.nombres,
+      lastName: created.apellidos,
+      specialtyId: created.especialidad,
+      phone: created.telefono,
+      tarjetaProfesional: created.tarjeta_profesional,
+      consultorio: created.consultorio,
     }
   },
 
   async updateMedico(id: string, data: Partial<Medico>): Promise<void> {
-    await medicosService.update(Number(id), {
-      nombres: data.firstName ?? null,
-      apellidos: data.lastName ?? null,
-      telefono: data.phone ?? null,
-      tarjeta_profesional: data.tarjetaProfesional ?? null,
-      especialidad: data.specialtyId ?? null,
-      consultorio: data.consultorio ?? null,
-    })
+    const profileUpdate: MedicoUpdateApiRequest = {}
+
+    if (data.firstName !== undefined) profileUpdate.nombres = data.firstName.trim()
+    if (data.lastName !== undefined) profileUpdate.apellidos = data.lastName.trim()
+    if (data.phone !== undefined) profileUpdate.telefono = data.phone.trim()
+    if (data.tarjetaProfesional !== undefined) {
+      profileUpdate.tarjeta_profesional = data.tarjetaProfesional.trim()
+    }
+    if (data.specialtyId !== undefined) profileUpdate.especialidad = data.specialtyId
+    if (data.consultorio !== undefined) profileUpdate.consultorio = data.consultorio.trim()
+
+    if (
+      data.email !== undefined ||
+      data.documentType !== undefined ||
+      data.documentNumber !== undefined ||
+      Boolean(data.password)
+    ) {
+      const current = await medicosService.getById(Number(id))
+      const userUpdate: UsuarioUpdateApiRequest = {}
+
+      if (data.email !== undefined) userUpdate.email = data.email.trim()
+      if (data.documentType !== undefined) userUpdate.tipo_documento = data.documentType
+      if (data.documentNumber !== undefined) {
+        userUpdate.numero_documento = data.documentNumber.trim()
+      }
+      if (data.password) userUpdate.password = data.password
+
+      await usuariosService.update(current.id_usuario, userUpdate)
+    }
+
+    await medicosService.update(Number(id), profileUpdate)
   },
 
   async removeMedico(id: string): Promise<void> {
@@ -341,6 +421,7 @@ export const adminService = {
   async updateAgenda(id: string, data: Partial<Agenda>): Promise<void> {
     await agendaService.update(Number(id), {
       fecha_inicio: data.date ?? null,
+      fecha_fin: data.date ?? null,
       hora_inicio: data.time ?? null,
       estado: data.status === 'Disponible' ? 'activo' : 'inactivo',
     })
@@ -421,14 +502,50 @@ export const adminService = {
 
   async addUsuario(data: {
     id_rol: number
+    rol: string
     tipo_documento: string
     numero_documento: string
     email: string
     password?: string
+    nombres?: string
+    apellidos?: string
+    fecha_nacimiento?: string
+    telefono?: string
+    direccion?: string
+    tarjeta_profesional?: string
+    especialidad?: string
+    consultorio?: string
   }): Promise<void> {
     const password = data.password?.trim() ?? ''
     if (!password) {
       throw new Error('La contraseña es obligatoria para crear el usuario.')
+    }
+
+    const roleKind = normalizeRole(data.rol)
+
+    if (roleKind === 'paciente' || roleKind === 'medico') {
+      const payload: RegistroUsuarioApiRequest = {
+        id_rol: data.id_rol,
+        tipo_documento: data.tipo_documento,
+        numero_documento: data.numero_documento.trim(),
+        email: data.email.trim(),
+        password,
+        nombres: data.nombres?.trim() || null,
+        apellidos: data.apellidos?.trim() || null,
+        telefono: data.telefono?.trim() || null,
+      }
+
+      if (roleKind === 'paciente') {
+        payload.fecha_nacimiento = data.fecha_nacimiento || null
+        payload.direccion = data.direccion?.trim() || null
+      } else {
+        payload.tarjeta_profesional = data.tarjeta_profesional?.trim() || null
+        payload.especialidad = data.especialidad?.trim() || null
+        payload.consultorio = data.consultorio?.trim() || null
+      }
+
+      await httpClient.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER_STAFF, payload)
+      return
     }
 
     await usuariosService.create({
@@ -444,11 +561,13 @@ export const adminService = {
     id: string,
     data: { id_rol?: number; email?: string; is_active?: boolean },
   ): Promise<void> {
-    await usuariosService.update(Number(id), {
-      id_rol: data.id_rol ?? null,
-      email: data.email ?? null,
-      is_active: data.is_active ?? null,
-    })
+    const payload: UsuarioUpdateApiRequest = {}
+
+    if (data.id_rol !== undefined) payload.id_rol = data.id_rol
+    if (data.email !== undefined) payload.email = data.email.trim()
+    if (data.is_active !== undefined) payload.is_active = data.is_active
+
+    await usuariosService.update(Number(id), payload)
   },
 
   async removeUsuario(id: string): Promise<void> {

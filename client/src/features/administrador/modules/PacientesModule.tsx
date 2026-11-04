@@ -19,6 +19,7 @@ import type { DocumentType, Paciente } from '../types/admin'
 
 const DOCUMENT_TYPES: DocumentType[] = ['CC', 'TI', 'CE', 'PA']
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface FormState {
   documentType: DocumentType
@@ -146,9 +147,35 @@ function PacientesModule() {
     setModalOpen(true)
   }
 
+  const validateForm = (): string | null => {
+    if (!form.documentNumber.trim()) return 'Ingresa el número de documento.'
+    if (!EMAIL_PATTERN.test(form.email.trim())) {
+      return 'Ingresa un correo electrónico válido.'
+    }
+    if (mode === 'create' && !form.password.trim()) {
+      return 'Ingresa una contraseña para el paciente.'
+    }
+    if (form.password && form.password.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres.'
+    }
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      return 'Ingresa nombres y apellidos del paciente.'
+    }
+    if (!form.birthDate) return 'Ingresa la fecha de nacimiento.'
+    if (!form.phone.trim()) return 'Ingresa el teléfono del paciente.'
+    if (!form.address.trim()) return 'Ingresa la dirección del paciente.'
+    return null
+  }
+
   const handleSubmit = async () => {
     if (mode === 'view' || saving) {
       setModalOpen(false)
+      return
+    }
+
+    const validation = validateForm()
+    if (validation) {
+      setFeedback({ type: 'error', message: validation })
       return
     }
 

@@ -133,6 +133,14 @@ function AgendaModule() {
           alert('Por favor selecciona la fecha de la agenda.')
           return
         }
+        if (!form.time) {
+          alert('Por favor selecciona la hora de inicio de la agenda.')
+          return
+        }
+        if (form.duracionMinutos <= 0) {
+          alert('La duración de la cita debe ser mayor a cero.')
+          return
+        }
         await adminService.addAgenda(form)
         await loadData()
         setModalOpen(false)
@@ -288,10 +296,9 @@ function AgendaModule() {
             ))}
           </AdminFormField>
           <AdminFormField
-            label="Especialidad"
+            label="Especialidad (según el médico)"
             id="specialtyId"
-            required
-            disabled={mode === 'view'}
+            disabled
             value={form.specialtyId}
             onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setForm((prev) => ({ ...prev, specialtyId: event.target.value }))
