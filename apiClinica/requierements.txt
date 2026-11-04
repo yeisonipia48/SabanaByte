@@ -1,0 +1,13 @@
+uvicorn
+sqlalchemy[asyncio]
+fastapi
+psycopg2-binary
+alembic
+asyncpg
+python-multipart
+pydantic
+typing
+dotenv
+alembic
+pwdlib[bcrypt]
+PyJWT

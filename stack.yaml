@@ -1,0 +1,194 @@
+services:
+  frontend:
+    image: frontendcitas:v1
+    environment:
+      TZ: America/Bogota
+    volumes:
+      - frontendcitas:/var/www/html
+    networks:
+      - net_api
+      - webpublic
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      labels:
+        - "traefik.enable=true"
+        - "traefik.swarm.network=app-clinica_webpublic"
+        - "traefik.http.routers.frontend.rule=Host(`citas.local`) || Host(`localhost`) || Host(`127.0.0.1`)"
+        - "traefik.http.routers.frontend.entrypoints=web"
+        - "traefik.http.services.frontend.loadbalancer.server.port=80"
+    
+  data:
+    image: postgres:18
+    environment:
+      TZ: America/Bogota
+      POSTGRES_USER_FILE: '/run/secrets/postgres_user'
+      POSTGRES_PASSWORD_FILE: '/run/secrets/postgres_password'
+    volumes:
+      - postgres_app_citas:/var/lib/postgresql
+    networks:
+      - net_api
+    secrets:
+      - postgres_user
+      - postgres_password
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+    expose:
+      - 5432
+    
+  pgbouncer:
+    image: edoburu/pgbouncer:latest #cualquier imagen oficial/estable
+    networks:
+      - net_api
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+    expose:
+      - 6432
+    secrets:
+      - postgres_user
+      - postgres_password
+    command:
+      - sh
+      - -c
+      - |
+        printf '"%s" "%s"\n' "$$(cat /run/secrets/postgres_user)" "$$(cat /run/secrets/postgres_password)" > /etc/pgbouncer/userlist.txt
+        exec /entrypoint.sh /usr/bin/pgbouncer /etc/pgbouncer/pgbouncer.ini
+    configs: # Los archivos se distribuyen nativamente en el clúster
+      - source: pgbouncer_config
+        target: /etc/pgbouncer/pgbouncer.ini
+    
+  
+  api:
+    image: api-clinica:v1
+    environment:
+      TZ: America/Bogota
+    networks:
+      - net_api
+    secrets:
+      - postgres_user
+      - postgres_password
+      - postgres_host
+      - postgres_db
+      - jwt_secret
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+    ports:
+      - 8000:8000
+
+
+  n8n:
+    image: n8nio/n8n
+    volumes:
+      - n8n-volume:/home/node/.n8n
+    networks:
+      - net_api
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - 5678:5678
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://127.0.0.1:5678/
+      - N8N_EDITOR_BASE_URL=http://127.0.0.1:5678/
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+  traefik:
+    image: traefik:v3
+    environment:
+      - DOCKER_API_VERSION=1.44
+    command:
+      # Activa la API interna de Traefik para ver el panel de control
+      - "--api.insecure=true"
+      # Usa el proveedor nativo de Swarm
+      - "--providers.swarm=true"
+      # Desactiva la exposición automática; solo expondrá lo que marquemos con etiquetas
+      - "--providers.swarm.exposedbydefault=false"
+      # Define el punto de entrada para tráfico HTTP normal
+      - "--entrypoints.web.address=:80"
+    ports:
+      - target: 80
+        published: 8081
+        mode: host
+      - target: 8080
+        published: 8080
+        mode: host # Panel de control de Traefik en el puerto 8080
+    volumes:
+      # Permite a Traefik escuchar los eventos de Docker para saber cuándo suben/bajan contenedores
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - webpublic
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+        failure_action: rollback
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+    
+# DEFINICIÓN DE CONFIGURACIONES (Mapea los archivos locales para que Docker los maneje)
+configs:
+  pgbouncer_config:
+    file: apiClinica/pgbouncer.ini
+
+volumes:
+  postgres_app_citas:
+    name: postgres_app_citas
+  frontendcitas:
+    name: frontendcitas
+  n8n-volume:
+    name: n8n-volume
+
+secrets:
+  postgres_password:
+    external: true
+  postgres_user:
+    external: true
+  postgres_host:
+    external: true
+  postgres_db:
+    external: true
+  jwt_secret:
+    external: true
+
+networks:
+  net_api:
+    driver: overlay
+    ipam:
+      config:
+        - subnet: 10.20.30.0/28
+  webpublic:
+    driver: overlay
