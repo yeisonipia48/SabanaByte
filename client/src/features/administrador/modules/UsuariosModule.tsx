@@ -6,17 +6,18 @@ import AdminModal from '../components/AdminModal'
 import AdminFormField from '../components/AdminFormField'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { adminService } from '../services/adminService'
-import type { DocumentType, UsuarioAdmin } from '../types/admin'
+import type { DocumentType, Especialidad, UsuarioAdmin } from '../types/admin'
 import type { RolApi } from '../../../types/api/auth'
 import { normalizeRole } from '../../../types/api/auth'
 
 const DOCUMENT_TYPES: DocumentType[] = ['CC', 'TI', 'CE', 'PA']
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function roleIdFor(roleName: string, roles: RolApi[]): number {
   return (
     roles.find(
       (candidate) => normalizeRole(candidate.rol) === normalizeRole(roleName),
-    )?.id ?? roles[0]?.id ?? 0
+    )?.id ?? 0
   )
 }
 
@@ -27,6 +28,14 @@ interface FormState {
   email: string
   password: string
   isActive: boolean
+  firstName: string
+  lastName: string
+  birthDate: string
+  phone: string
+  address: string
+  tarjetaProfesional: string
+  especialidad: string
+  consultorio: string
 }
 
 const emptyForm: FormState = {
@@ -36,11 +45,20 @@ const emptyForm: FormState = {
   email: '',
   password: '',
   isActive: true,
+  firstName: '',
+  lastName: '',
+  birthDate: '',
+  phone: '',
+  address: '',
+  tarjetaProfesional: '',
+  especialidad: '',
+  consultorio: '',
 }
 
 function UsuariosModule() {
   const [items, setItems] = useState<UsuarioAdmin[]>([])
   const [roles, setRoles] = useState<RolApi[]>([])
+  const [especialidades] = useState<Especialidad[]>(() => adminService.getEspecialidades())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -84,6 +102,9 @@ function UsuariosModule() {
     })
   }, [items, search])
 
+  const selectedRole = roles.find((role) => role.id === form.idRol)
+  const roleKind = selectedRole ? normalizeRole(selectedRole.rol) : 'otro'
+
   const openCreate = () => {
     setMode('create')
     setSelected(null)
@@ -98,11 +119,11 @@ function UsuariosModule() {
     setMode('edit')
     setSelected(item)
     setForm({
+      ...emptyForm,
       idRol: roleIdFor(item.rol, roles),
       documentType: item.documentType,
       documentNumber: item.documentNumber,
       email: item.email,
-      password: '',
       isActive: item.isActive,
     })
     setModalOpen(true)
@@ -112,14 +133,52 @@ function UsuariosModule() {
     setMode('view')
     setSelected(item)
     setForm({
+      ...emptyForm,
       idRol: roleIdFor(item.rol, roles),
       documentType: item.documentType,
       documentNumber: item.documentNumber,
       email: item.email,
-      password: '',
       isActive: item.isActive,
     })
     setModalOpen(true)
+  }
+
+  const validateForm = (): string | null => {
+    if (mode === 'create') {
+      if (!form.documentNumber.trim()) return 'Ingresa el número de documento.'
+      if (form.idRol <= 0) return 'Selecciona un rol válido.'
+      if (!form.password.trim()) return 'Ingresa una contraseña.'
+      if (form.password.length < 6) {
+        return 'La contraseña debe tener al menos 6 caracteres.'
+      }
+
+      if (roleKind === 'paciente') {
+        if (!form.firstName.trim() || !form.lastName.trim()) {
+          return 'Ingresa nombres y apellidos del paciente.'
+        }
+        if (!form.birthDate) return 'Ingresa la fecha de nacimiento del paciente.'
+        if (!form.phone.trim()) return 'Ingresa el teléfono del paciente.'
+      }
+
+      if (roleKind === 'medico') {
+        if (!form.firstName.trim() || !form.lastName.trim()) {
+          return 'Ingresa nombres y apellidos del médico.'
+        }
+        if (!form.phone.trim()) return 'Ingresa el teléfono del médico.'
+        if (!form.tarjetaProfesional.trim()) {
+          return 'Ingresa la tarjeta profesional del médico.'
+        }
+        if (!form.especialidad) return 'Selecciona la especialidad del médico.'
+        if (!form.consultorio.trim()) return 'Ingresa el consultorio del médico.'
+      }
+    }
+
+    if (!form.email.trim()) return 'Ingresa el correo electrónico.'
+    if (!EMAIL_PATTERN.test(form.email.trim())) {
+      return 'Ingresa un correo electrónico válido.'
+    }
+
+    return null
   }
 
   const handleSubmit = async () => {
@@ -127,30 +186,30 @@ function UsuariosModule() {
       setModalOpen(false)
       return
     }
+
+    const validation = validateForm()
+    if (validation) {
+      alert(validation)
+      return
+    }
+
     try {
       if (mode === 'create') {
-        if (!form.documentNumber.trim()) {
-          alert('Ingresa el número de documento.')
-          return
-        }
-        if (!form.email.trim()) {
-          alert('Ingresa el correo electrónico.')
-          return
-        }
-        if (form.idRol <= 0) {
-          alert('Selecciona un rol válido.')
-          return
-        }
-        if (!form.password.trim()) {
-          alert('Ingresa una contraseña.')
-          return
-        }
         await adminService.addUsuario({
           id_rol: form.idRol,
+          rol: selectedRole?.rol ?? '',
           tipo_documento: form.documentType,
           numero_documento: form.documentNumber,
           email: form.email,
           password: form.password,
+          nombres: form.firstName,
+          apellidos: form.lastName,
+          fecha_nacimiento: form.birthDate,
+          telefono: form.phone,
+          direccion: form.address,
+          tarjeta_profesional: form.tarjetaProfesional,
+          especialidad: form.especialidad,
+          consultorio: form.consultorio,
         })
         await loadUsuarios()
         setModalOpen(false)
@@ -158,7 +217,6 @@ function UsuariosModule() {
       }
       if (mode === 'edit' && selected) {
         await adminService.updateUsuario(selected.id, {
-          id_rol: form.idRol,
           email: form.email,
           is_active: form.isActive,
         })
@@ -357,18 +415,147 @@ function UsuariosModule() {
             label="Rol del usuario"
             id="rol"
             required
-            disabled={mode === 'view'}
+            disabled={mode !== 'create'}
             value={String(form.idRol)}
             onChange={(event: ChangeEvent<HTMLSelectElement>) =>
               setForm((prev) => ({ ...prev, idRol: Number(event.target.value) }))
             }
           >
+            <option value={0} disabled>
+              Seleccionar rol
+            </option>
             {roles.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.rol}
               </option>
             ))}
           </AdminFormField>
+          {mode === 'edit' ? (
+            <div className="sm:col-span-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                El rol no se puede cambiar después de crear el usuario porque su perfil
+                asociado quedaría incompleto.
+              </p>
+            </div>
+          ) : null}
+          {mode === 'create' && roleKind === 'paciente' ? (
+            <>
+              <AdminFormField
+                label="Nombres"
+                id="firstName"
+                required
+                value={form.firstName}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, firstName: event.target.value }))
+                }
+              />
+              <AdminFormField
+                label="Apellidos"
+                id="lastName"
+                required
+                value={form.lastName}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, lastName: event.target.value }))
+                }
+              />
+              <AdminFormField
+                label="Fecha de nacimiento"
+                id="birthDate"
+                type="date"
+                required
+                value={form.birthDate}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, birthDate: event.target.value }))
+                }
+              />
+              <AdminFormField
+                label="Teléfono"
+                id="phone"
+                type="tel"
+                required
+                value={form.phone}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, phone: event.target.value }))
+                }
+              />
+              <div className="sm:col-span-2">
+                <AdminFormField
+                  label="Dirección"
+                  id="address"
+                  value={form.address}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setForm((prev) => ({ ...prev, address: event.target.value }))
+                  }
+                />
+              </div>
+            </>
+          ) : null}
+          {mode === 'create' && roleKind === 'medico' ? (
+            <>
+              <AdminFormField
+                label="Nombres"
+                id="firstName"
+                required
+                value={form.firstName}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, firstName: event.target.value }))
+                }
+              />
+              <AdminFormField
+                label="Apellidos"
+                id="lastName"
+                required
+                value={form.lastName}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, lastName: event.target.value }))
+                }
+              />
+              <AdminFormField
+                label="Teléfono"
+                id="phone"
+                type="tel"
+                required
+                value={form.phone}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, phone: event.target.value }))
+                }
+              />
+              <AdminFormField
+                label="Tarjeta profesional"
+                id="tarjetaProfesional"
+                required
+                value={form.tarjetaProfesional}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, tarjetaProfesional: event.target.value }))
+                }
+              />
+              <AdminFormField
+                label="Especialidad"
+                id="especialidad"
+                required
+                value={form.especialidad}
+                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                  setForm((prev) => ({ ...prev, especialidad: event.target.value }))
+                }
+              >
+                <option value="">Seleccionar especialidad</option>
+                {especialidades.map((especialidad) => (
+                  <option key={especialidad.id} value={especialidad.name}>
+                    {especialidad.name}
+                  </option>
+                ))}
+              </AdminFormField>
+              <AdminFormField
+                label="Consultorio"
+                id="consultorio"
+                required
+                value={form.consultorio}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setForm((prev) => ({ ...prev, consultorio: event.target.value }))
+                }
+              />
+            </>
+          ) : null}
           {mode === 'edit' && (
             <AdminFormField
               label="Estado"

@@ -29,6 +29,12 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
   const [booking, setBooking] = useState(false)
 
   const loadSlots = useCallback(async () => {
+    if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+      setError('La fecha final no puede ser anterior a la fecha inicial.')
+      setSlots([])
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
@@ -64,6 +70,14 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
         (a, b) => a.localeCompare(b),
       ),
     [medicos],
+  )
+
+  const medicosFiltrados = useMemo(
+    () =>
+      especialidad
+        ? medicos.filter((medico) => medico.especialidad === especialidad)
+        : medicos,
+    [especialidad, medicos],
   )
 
   const filtered = useMemo(() => {
@@ -125,7 +139,14 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <select
           value={especialidad}
-          onChange={(event) => setEspecialidad(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value
+            setEspecialidad(value)
+            if (medicoId) {
+              const selected = medicos.find((medico) => String(medico.id) === medicoId)
+              if (selected && value && selected.especialidad !== value) setMedicoId('')
+            }
+          }}
           className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-700/25"
           aria-label="Filtrar por especialidad"
         >
@@ -143,7 +164,7 @@ function PacienteAgendaModule({ user }: PacienteAgendaModuleProps) {
           aria-label="Filtrar por médico"
         >
           <option value="">Todos los médicos</option>
-          {medicos.map((medico) => (
+          {medicosFiltrados.map((medico) => (
             <option key={medico.id} value={medico.id}>
               {medico.nombres} {medico.apellidos}
             </option>
